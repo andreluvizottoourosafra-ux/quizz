@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Telão · Quiz Ouro Safra</title>
+<link rel="stylesheet" href="/estilo.css">
+<style>
+  html { font-size: clamp(12px, 1.05vw, 26px); }
+  body { overflow: hidden; }
+  #app { position: relative; z-index: 1; height: 100vh; display: flex; flex-direction: column; padding: 1.6rem 2.2rem 1.2rem; gap: 1.2rem; }
+  header { display: flex; align-items: center; justify-content: space-between; }
+  header .marca { font-size: 1.5rem; }
+  .info { display: flex; gap: .8rem; align-items: center; font-weight: 700; color: var(--marrom-2); }
+  .chip { background: var(--papel); border-radius: 999px; padding: .45em 1em; box-shadow: var(--sombra); font-weight: 800; color: var(--marrom); }
+  .chip b { color: var(--verde); }
+  main { flex: 1; min-height: 0; position: relative; }
+  .tela { position: absolute; inset: 0; display: none; }
+  .tela.ativa { display: flex; animation: entra .35s ease both; }
+  footer { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+  footer .esq, footer .dir { display: flex; gap: .7rem; align-items: center; }
+  footer .dica { color: var(--marrom-2); font-size: .85rem; font-weight: 600; }
+
+  /* Lobby */
+  #lobby { gap: 2rem; }
+  .lobby-qr { flex: 0 0 38%; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem; gap: 1rem; text-align: center; }
+  .lobby-qr h1 { margin: 0; font-size: 2.6rem; line-height: 1.1; font-weight: 900; }
+  .lobby-qr h1 span { color: var(--verde); }
+  .lobby-qr p { margin: 0; font-size: 1.25rem; font-weight: 600; color: var(--marrom-2); }
+  .qr { width: min(30vw, 52vh); aspect-ratio: 1; padding: 1rem; background: #fff; border-radius: 22px; border: 4px solid var(--ouro); }
+  .qr img { width: 100%; height: 100%; display: block; }
+  .url { font-weight: 800; font-size: 1.3rem; color: var(--verde); background: var(--verde-suave); padding: .4em .9em; border-radius: 12px; word-break: break-all; }
+  .lobby-lista { flex: 1; display: flex; flex-direction: column; padding: 1.6rem; min-width: 0; }
+  .lobby-lista .topo { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 1rem; }
+  .lobby-lista h2 { margin: 0; font-size: 1.6rem; font-weight: 800; }
+  .contador { font-size: 3.6rem; font-weight: 900; color: var(--ouro); line-height: 1; }
+  .contador small { font-size: 1.1rem; color: var(--marrom-2); font-weight: 700; margin-left: .3em; }
+  .nomes { flex: 1; overflow: hidden; display: flex; flex-wrap: wrap; align-content: flex-start; gap: .6rem; }
+  .nome-chip { background: var(--ouro-suave); border: 2px solid var(--ouro-claro); border-radius: 999px; padding: .4em .9em; font-weight: 800; font-size: 1.1rem; animation: pop .45s ease both; }
+  .nome-chip small { font-weight: 600; color: var(--marrom-2); margin-left: .35em; font-size: .8em; }
+  .vazio { color: var(--marrom-2); font-weight: 600; font-size: 1.2rem; margin: auto; text-align: center; }
+
+  /* Pergunta */
+  #pergunta { gap: 1.6rem; }
+  .q-main { flex: 1; display: flex; flex-direction: column; gap: 1.2rem; min-width: 0; }
+  .q-topo { display: flex; align-items: center; gap: 1.4rem; }
+  .q-num { font-weight: 800; color: var(--verde); font-size: 1.15rem; letter-spacing: .04em; text-transform: uppercase; }
+  .q-texto { flex: 1; display: flex; align-items: center; justify-content: center; text-align: center; padding: 1.4rem 2rem; font-size: 2.7rem; font-weight: 800; line-height: 1.18; min-height: 0; }
+  .timer { position: relative; width: 6.4rem; height: 6.4rem; flex: none; }
+  .timer svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .timer .fundo { stroke: var(--linha); }
+  .timer .arco { stroke: var(--verde); transition: stroke .3s; }
+  .timer.fim .arco { stroke: var(--erro); }
+  .timer span { position: absolute; inset: 0; display: grid; place-items: center; font-size: 2.2rem; font-weight: 900; }
+  .respondidos { text-align: center; }
+  .respondidos b { display: block; font-size: 2.6rem; font-weight: 900; line-height: 1; color: var(--marrom); }
+  .respondidos small { font-weight: 700; color: var(--marrom-2); }
+  .alts { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; flex: 0 0 auto; }
+  .alt { position: relative; display: flex; align-items: center; gap: 1rem; border-radius: var(--raio); padding: 1.3rem 1.5rem; font-size: 1.75rem; font-weight: 800; min-height: 6.2rem; box-shadow: var(--sombra); overflow: hidden; transition: opacity .4s, transform .4s, filter .4s; }
+  .alt .forma { width: 2.2rem; height: 2.2rem; }
+  .alt .txt { flex: 1; position: relative; z-index: 1; }
+  .alt .qtd { position: relative; z-index: 1; font-size: 1.6rem; font-weight: 900; background: rgba(255,255,255,.25); border-radius: 12px; padding: .1em .55em; }
+  .alt .barra { position: absolute; inset: auto 0 0 0; height: 0; background: rgba(0,0,0,.12); transition: height .8s ease; }
+  .alt .check { display: none; width: 2.4rem; height: 2.4rem; border-radius: 50%; background: #fff; color: var(--verde); font-size: 1.6rem; font-weight: 900; place-items: center; position: relative; z-index: 1; }
+  .revelado .alt.errada { opacity: .32; filter: saturate(.3); transform: scale(.97); }
+  .revelado .alt.certa { transform: scale(1.02); box-shadow: 0 0 0 5px #fff, 0 0 0 9px var(--verde), var(--sombra); }
+  .revelado .alt.certa .check { display: grid; }
+
+  /* Feed ao vivo */
+  .feed { flex: 0 0 29%; display: flex; flex-direction: column; padding: 1.2rem 1.2rem .6rem; min-width: 0; }
+  .feed h3 { margin: 0 0 .8rem; font-size: 1.15rem; font-weight: 800; display: flex; align-items: center; gap: .5rem; }
+  .ao-vivo { width: .7rem; height: .7rem; border-radius: 50%; background: var(--erro); animation: pulso 1.2s infinite; }
+  .feed-lista { flex: 1; overflow: hidden; position: relative; display: flex; flex-direction: column; gap: .5rem; }
+  .feed-lista::after { content: ''; position: absolute; inset: auto 0 0 0; height: 3rem; background: linear-gradient(transparent, #fff); }
+  .item { display: flex; align-items: center; gap: .7rem; padding: .55rem .7rem; border-radius: 14px; background: var(--creme); animation: sobe .45s cubic-bezier(.2,.9,.3,1.2) both; }
+  .item.ok { background: var(--verde-suave); }
+  .item .quem { flex: 1; min-width: 0; }
+  .item .quem b { display: block; font-size: 1.05rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item .quem small { display: block; color: var(--marrom-2); font-weight: 600; font-size: .78rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item .pts { font-weight: 900; font-size: 1.15rem; color: var(--marrom-2); white-space: nowrap; }
+  .item.ok .pts { color: var(--verde); }
+  .item .total { font-size: .78rem; font-weight: 700; color: var(--marrom-2); text-align: right; }
+  @keyframes sobe { from { opacity: 0; transform: translateY(-24px) scale(.95); background: var(--ouro-suave); } to { opacity: 1; transform: none; } }
+
+  /* Ranking */
+  #ranking, #final { flex-direction: column; align-items: center; }
+  .titulo { font-size: 2.4rem; font-weight: 900; margin: 0 0 .9rem; text-align: center; }
+  .titulo span { color: var(--ouro); }
+  .rank { width: min(100%, 64rem); flex: 1; min-height: 0; display: flex; flex-direction: column; gap: .5rem; position: relative; }
+  .linha { display: flex; align-items: center; gap: 1rem; padding: .4rem 1rem; flex: 1 1 0; min-height: 0; max-height: 4rem; position: relative; overflow: hidden; transition: transform .7s cubic-bezier(.3,.9,.3,1); }
+  .linha .preench { position: absolute; inset: 0 auto 0 0; background: var(--ouro-suave); transition: width 1s ease; z-index: 0; }
+  .linha > *:not(.preench) { position: relative; z-index: 1; }
+  .linha .pos { width: 2.6rem; height: 2.6rem; border-radius: 50%; display: grid; place-items: center; font-weight: 900; font-size: 1.25rem; background: var(--creme); }
+  .linha:nth-child(1) .pos { background: var(--ouro); }
+  .linha:nth-child(2) .pos { background: #D9D4C7; }
+  .linha:nth-child(3) .pos { background: #D8A47A; }
+  .linha .n { flex: 1; min-width: 0; font-weight: 800; font-size: 1.4rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .linha .n small { font-weight: 600; color: var(--marrom-2); font-size: .7em; margin-left: .5em; }
+  .linha .delta { font-weight: 800; font-size: 1rem; color: var(--verde); width: 3.4rem; text-align: right; }
+  .linha .delta.caiu { color: var(--erro); }
+  .linha .p { font-weight: 900; font-size: 1.45rem; min-width: 6rem; text-align: right; }
+
+  /* Pódio */
+  .podio { display: flex; align-items: flex-end; justify-content: center; gap: 1.4rem; margin-top: 1rem; }
+  .degrau { width: 15rem; display: flex; flex-direction: column; align-items: center; animation: entra .7s ease both; }
+  .degrau .pessoa { text-align: center; margin-bottom: .8rem; }
+  .degrau .pessoa b { display: block; font-size: 1.6rem; font-weight: 900; }
+  .degrau .pessoa small { display: block; font-weight: 600; color: var(--marrom-2); }
+  .degrau .pessoa em { display: block; font-style: normal; font-weight: 900; color: var(--verde); font-size: 1.3rem; margin-top: .2rem; }
+  .degrau .bloco { width: 100%; border-radius: 18px 18px 0 0; display: grid; place-items: start center; padding-top: 1rem; font-size: 3.4rem; font-weight: 900; color: #fff; box-shadow: var(--sombra); }
+  .d1 .bloco { height: 17rem; background: linear-gradient(var(--ouro-claro), var(--ouro)); color: var(--marrom); }
+  .d2 .bloco { height: 12rem; background: linear-gradient(#5E9A3A, var(--verde)); }
+  .d3 .bloco { height: 8.5rem; background: linear-gradient(#C9784A, #A4512A); }
+  .d1 { animation-delay: 1.4s; } .d2 { animation-delay: .7s; } .d3 { animation-delay: 0s; }
+  .resto { display: flex; flex-wrap: wrap; justify-content: center; gap: .6rem; margin-top: 1.4rem; max-width: 70rem; }
+  .resto .chip { font-size: 1rem; }
+
+  /* PIN */
+  #pin { position: fixed; inset: 0; z-index: 10; background: var(--creme); display: grid; place-items: center; }
+  #pin form { padding: 2.4rem; display: flex; flex-direction: column; gap: 1rem; align-items: center; min-width: 22rem; }
+  #pin input { font: inherit; font-size: 1.6rem; font-weight: 800; text-align: center; letter-spacing: .3em; padding: .5em; border-radius: 14px; border: 2px solid var(--linha); width: 12rem; }
+  #pin .erro { color: var(--erro); font-weight: 700; min-height: 1.2em; }
+  body:not(.apresentador) .so-apresentador { display: none !important; }
+  body.apresentador #btnLogin { display: none; }
+  .conexao { position: fixed; top: .8rem; left: 50%; transform: translateX(-50%); background: var(--erro); color: #fff; padding: .4em 1em; border-radius: 999px; font-weight: 700; z-index: 20; }
+</style>
+</head>
+<body>
+<div id="fundo"></div>
+
+<div id="pin" class="hidden">
+  <form class="cartao" autocomplete="off">
+    <div class="marca" id="marcaPin" style="font-size:1.4rem"></div>
+    <h2 style="margin:.4rem 0 0">Telão do apresentador</h2>
+    <input id="pinInput" type="password" inputmode="numeric" placeholder="PIN" autofocus>
+    <div class="erro" id="pinErro"></div>
+    <button class="btn">Entrar</button>
+    <button type="button" class="btn claro" id="btnFecharPin">Cancelar</button>
+  </form>
+</div>
+<div class="conexao hidden" id="conexao">Reconectando…</div>
+
+<div id="app">
+  <header>
+    <div class="marca" id="marca"></div>
+    <div class="info">
+      <span class="chip" id="chipPerg"></span>
+      <span class="chip"><b id="chipJog">0</b> participantes</span>
+    </div>
+  </header>
+
+  <main>
+    <!-- LOBBY -->
+    <section class="tela" id="lobby">
+      <div class="lobby-qr cartao">
+        <h1>Quiz do <span>Treinamento</span></h1>
+        <p>Aponte a câmera do celular para o QR Code</p>
+        <div class="qr"><img src="/qr.svg" alt="QR Code para entrar"></div>
+        <div class="url" id="url"></div>
+      </div>
+      <div class="lobby-lista cartao">
+        <div class="topo">
+          <h2>Quem já entrou</h2>
+          <div class="contador"><span id="lobbyCount">0</span><small>participantes</small></div>
+        </div>
+        <div class="nomes" id="nomes"><div class="vazio">Aguardando os primeiros participantes…</div></div>
+      </div>
+    </section>
+
+    <!-- PERGUNTA / REVELAÇÃO -->
+    <section class="tela" id="pergunta">
+      <div class="q-main">
+        <div class="q-topo">
+          <div class="timer" id="timer">
+            <svg viewBox="0 0 100 100"><circle class="fundo" cx="50" cy="50" r="44" fill="none" stroke-width="9"/>
+              <circle class="arco" id="arco" cx="50" cy="50" r="44" fill="none" stroke-width="9" stroke-linecap="round" stroke-dasharray="276.46" stroke-dashoffset="0"/></svg>
+            <span id="seg">20</span>
+          </div>
+          <div style="flex:1">
+            <div class="q-num" id="qNum"></div>
+          </div>
+          <div class="respondidos"><b id="resp">0</b><small id="respDe">respostas</small></div>
+        </div>
+        <div class="q-texto cartao" id="qTexto"></div>
+        <div class="alts" id="alts"></div>
+      </div>
+      <aside class="feed cartao">
+        <h3><span class="ao-vivo"></span> Respostas ao vivo</h3>
+        <div class="feed-lista" id="feed"></div>
+      </aside>
+    </section>
+
+    <!-- RANKING -->
+    <section class="tela" id="ranking">
+      <div class="titulo" id="rankTitulo">Ranking</div>
+      <div class="rank" id="rank"></div>
+    </section>
+
+    <!-- FINAL -->
+    <section class="tela" id="final">
+      <div class="titulo">🏆 Resultado <span>final</span></div>
+      <div class="podio" id="podio"></div>
+      <div class="resto" id="resto"></div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="esq">
+      <button class="btn claro" id="btnTela" title="Tela cheia (F)">⛶ Tela cheia</button>
+      <button class="btn claro" id="btnLogin">🔒 Apresentador</button>
+      <button class="btn claro so-apresentador" id="btnReset">↺ Reiniciar</button>
+      <a class="btn claro hidden so-apresentador" id="btnCsv" style="text-decoration:none">⬇ Resultados (Excel)</a>
+    </div>
+    <span class="dica so-apresentador">Espaço ou → avança</span>
+    <div class="dir so-apresentador">
+      <button class="btn claro hidden" id="btnEncerrar">Encerrar tempo</button>
+      <button class="btn ouro" id="btnNext">Iniciar quiz ▶</button>
+    </div>
+  </footer>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="/comum.js"></script>
+<script>
+const socket = io({ transports: ['websocket', 'polling'] });
+let S = null;                 // último estado do servidor
+let pin = sessionStorage.getItem('quizPin') || '';
+let rankAnterior = new Map(); // id -> posição no ranking anterior
+let ultimaFase = '';
+let ultimaPerg = -1;
+
+$('#fundo').innerHTML = ondas();
+montarMarca($('#marca')); montarMarca($('#marcaPin'));
+fetch('/join-url').then(r => r.json()).then(j => $('#url').textContent = j.url.replace(/^https?:\/\//, '').replace(/\/$/, ''));
+
+// ---------- autenticação ----------
+let autenticado = false;
+function autenticar(p, silencioso) {
+  socket.emit('host:auth', p, (res) => {
+    if (res && res.ok) { pin = p; autenticado = true; sessionStorage.setItem('quizPin', p); $('#pin').classList.add('hidden'); }
+    else { pin = ''; autenticado = false; sessionStorage.removeItem('quizPin'); if (!silencioso) $('#pinErro').textContent = 'PIN incorreto'; }
+    document.body.classList.toggle('apresentador', autenticado);
+    render();
+  });
+}
+function pedirPin() { $('#pinErro').textContent = ''; $('#pinInput').value = ''; $('#pin').classList.remove('hidden'); setTimeout(() => $('#pinInput').focus(), 50); }
+$('#btnLogin').onclick = pedirPin;
+$('#btnFecharPin').onclick = () => $('#pin').classList.add('hidden');
+$('#pin form').addEventListener('submit', (e) => { e.preventDefault(); autenticar($('#pinInput').value.trim()); });
+socket.on('connect', () => { $('#conexao').classList.add('hidden'); socket.emit('host:watch'); if (pin) autenticar(pin, true); });
+socket.on('disconnect', () => $('#conexao').classList.remove('hidden'));
+
+// ---------- controles ----------
+$('#btnNext').onclick = () => socket.emit('host:next');
+$('#btnEncerrar').onclick = () => socket.emit('host:end');
+$('#btnReset').onclick = () => {
+  const manter = confirm('Reiniciar o quiz.\n\nOK = manter os participantes cadastrados (zera pontos)\nCancelar = escolher apagar todos');
+  if (manter) return socket.emit('host:reset', true);
+  if (confirm('Apagar TODOS os participantes e voltar ao QR Code?')) socket.emit('host:reset', false);
+};
+$('#btnTela').onclick = telaCheia;
+function telaCheia() { document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen().catch(() => {}); }
+document.addEventListener('keydown', (e) => {
+  if (!$('#pin').classList.contains('hidden')) return;
+  if (!autenticado) { if (e.key === 'f' || e.key === 'F') telaCheia(); return; }
+  if (e.key === ' ' || e.key === 'ArrowRight' || e.key === 'Enter') { e.preventDefault(); socket.emit('host:next'); }
+  if (e.key === 'f' || e.key === 'F') telaCheia();
+});
+
+// ---------- estado ----------
+socket.on('host:state', (st) => { syncClock(st.question && st.question.serverNow); S = st; render(); });
+
+const mostrados = new Set();
+
+socket.on('host:live', (d) => {
+  $('#resp').textContent = fmt(d.answered);
+  $('#chipJog').textContent = fmt(d.playersCount);
+  const feed = $('#feed');
+  const novos = d.events.slice(-12);
+  for (const ev of novos) {
+    const div = document.createElement('div');
+    div.className = 'item' + (ev.correct ? ' ok' : '');
+    div.innerHTML = `<div class="quem"><b>${esc(ev.nome)}</b><small>${esc(ev.empresa)} · ${(ev.ms / 1000).toFixed(1).replace('.', ',')}s</small></div>
+      <div><div class="pts">+${fmt(ev.points)}</div><div class="total">${fmt(ev.score)} pts</div></div>`;
+    feed.prepend(div);
+  }
+  while (feed.children.length > 14) feed.lastElementChild.remove();
+});
+
+function chipNome(p) { return `<span class="nome-chip" data-id="${esc(p.id)}">${esc(p.nome)}<small>${esc(p.empresa)}</small></span>`; }
+
+function mostrar(id) {
+  document.querySelectorAll('.tela').forEach((t) => t.classList.toggle('ativa', t.id === id));
+}
+
+function render() {
+  if (!S) return;
+  const fase = S.phase;
+  $('#chipJog').textContent = fmt(S.playersCount);
+  $('#chipPerg').textContent = S.question ? `Pergunta ${S.question.index + 1} de ${S.totalQuestions}` : `${S.totalQuestions} perguntas`;
+  $('#btnEncerrar').classList.toggle('hidden', fase !== 'question');
+  $('#btnCsv').classList.toggle('hidden', fase !== 'final' && fase !== 'ranking');
+  $('#btnCsv').href = '/resultados.csv?pin=' + encodeURIComponent(pin);
+  const rotulo = { lobby: 'Iniciar quiz ▶', question: 'Mostrar resposta ▶', reveal: 'Ver ranking ▶',
+    ranking: S.question && S.question.index + 1 >= S.totalQuestions ? 'Resultado final 🏆' : 'Próxima pergunta ▶', final: '' }[fase];
+  $('#btnNext').textContent = rotulo;
+  $('#btnNext').classList.toggle('hidden', fase === 'final');
+  $('#btnNext').disabled = fase === 'lobby' && S.playersCount === 0;
+
+  if (fase === 'lobby') renderLobby();
+  else if (fase === 'question' || fase === 'reveal') renderPergunta();
+  else if (fase === 'ranking') { if (ultimaFase !== 'ranking') renderRanking(); }
+  else if (fase === 'final') { if (ultimaFase !== 'final') renderFinal(); }
+  ultimaFase = fase;
+}
+
+function renderLobby() {
+  mostrar('lobby');
+  $('#lobbyCount').textContent = fmt(S.playersCount);
+  const nomes = $('#nomes');
+  const ids = new Set(S.players.map((p) => p.id));
+  if (!S.players.length) { nomes.innerHTML = '<div class="vazio">Aguardando os primeiros participantes…</div>'; mostrados.clear(); }
+  else {
+    const vazio = nomes.querySelector('.vazio'); if (vazio) vazio.remove();
+    nomes.querySelectorAll('.nome-chip').forEach((c) => { if (!ids.has(c.dataset.id)) { c.remove(); mostrados.delete(c.dataset.id); } });
+    for (const p of S.players) if (!mostrados.has(p.id)) { mostrados.add(p.id); nomes.insertAdjacentHTML('afterbegin', chipNome(p)); }
+  }
+  rankAnterior = new Map();
+}
+
+let rafTimer = null;
+function renderPergunta() {
+  const q = S.question;
+  const nova = ultimaPerg !== q.index || ultimaFase !== 'question' && S.phase === 'question';
+  mostrar('pergunta');
+  $('#qNum').textContent = S.phase === 'reveal' ? 'Resposta correta' : 'Responda pelo celular';
+  $('#qTexto').textContent = q.pergunta;
+  $('#resp').textContent = fmt(S.answered);
+  $('#respDe').textContent = `de ${fmt(S.onlineCount)} responderam`;
+  const revel = S.phase === 'reveal';
+  const total = Math.max(1, S.answered);
+  $('#alts').className = 'alts' + (revel ? ' revelado' : '');
+  $('#alts').style.gridTemplateColumns = q.alternativas.length === 2 ? '1fr 1fr' : '';
+  $('#alts').innerHTML = q.alternativas.map((a, i) => {
+    const qtd = revel ? S.distribution[i] : null;
+    const cls = revel ? (i === S.correta ? 'certa' : 'errada') : '';
+    return `<div class="alt alt-${i} ${cls}">
+      <div class="barra" style="height:${revel ? Math.round(qtd / total * 100) : 0}%"></div>
+      ${FORMAS[i]}<span class="txt">${esc(a)}</span>
+      ${revel ? `<span class="check">✓</span><span class="qtd">${fmt(qtd)}</span>` : ''}
+    </div>`;
+  }).join('');
+  if (nova && S.phase === 'question') $('#feed').innerHTML = '';
+  ultimaPerg = q.index;
+
+  cancelAnimationFrame(rafTimer);
+  const tick = () => {
+    const rest = S.phase === 'question' ? Math.max(0, q.endsAt - agora()) : 0;
+    const frac = rest / (q.tempo * 1000);
+    $('#arco').style.strokeDashoffset = 276.46 * (1 - Math.min(1, frac));
+    $('#seg').textContent = Math.ceil(rest / 1000);
+    $('#timer').classList.toggle('fim', rest < 5000);
+    if (S.phase === 'question' && rest > 0) rafTimer = requestAnimationFrame(tick);
+  };
+  tick();
+}
+
+function renderRanking() {
+  mostrar('ranking');
+  const q = S.question;
+  $('#rankTitulo').innerHTML = `Ranking após a pergunta <span>${q.index + 1}</span>`;
+  const top = S.ranking.slice(0, 10);
+  const max = Math.max(1, top[0] ? top[0].score : 1);
+  const el = $('#rank');
+  el.innerHTML = top.map((p) => {
+    const antes = rankAnterior.get(p.id);
+    let delta = '';
+    if (antes && antes !== p.pos) delta = antes > p.pos ? `▲ ${antes - p.pos}` : `▼ ${p.pos - antes}`;
+    return `<div class="linha cartao" data-id="${esc(p.id)}" data-antes="${antes || 11}">
+      <div class="preench" style="width:0" data-w="${Math.round(p.score / max * 100)}"></div>
+      <div class="pos">${p.pos}</div>
+      <div class="n">${esc(p.nome)}<small>${esc(p.empresa)}</small></div>
+      <div class="delta ${delta.startsWith('▼') ? 'caiu' : ''}">${delta}</div>
+      <div class="p">${fmt(p.score)}</div></div>`;
+  }).join('') || '<div class="vazio">Ninguém pontuou ainda</div>';
+  // animação: cada linha sai da posição anterior e desliza até a nova
+  const linhas = [...el.querySelectorAll('.linha')];
+  const passo = linhas[1] ? linhas[1].offsetTop - linhas[0].offsetTop : 70;
+  linhas.forEach((l, i) => {
+    const antes = Number(l.dataset.antes) - 1;
+    l.style.transition = 'none';
+    l.style.transform = `translateY(${(Math.min(antes, 10) - i) * passo}px)`;
+    l.style.opacity = antes >= 10 ? '0' : '1';
+  });
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    linhas.forEach((l) => {
+      l.style.transition = ''; l.style.transform = ''; l.style.opacity = '1';
+      const f = l.querySelector('.preench'); f.style.width = f.dataset.w + '%';
+    });
+  }));
+  rankAnterior = new Map(S.ranking.map((p) => [p.id, p.pos]));
+}
+
+function renderFinal() {
+  mostrar('final');
+  const r = S.ranking;
+  const d = (p, n) => p ? `<div class="degrau d${n}"><div class="pessoa"><b>${esc(p.nome)}</b><small>${esc(p.empresa)}</small><em>${fmt(p.score)} pts</em></div><div class="bloco">${n}º</div></div>` : '';
+  $('#podio').innerHTML = d(r[1], 2) + d(r[0], 1) + d(r[2], 3);
+  $('#resto').innerHTML = r.slice(3, 15).map((p) => `<span class="chip">${p.pos}º ${esc(p.nome)} · ${fmt(p.score)}</span>`).join('');
+}
+</script>
+</body>
+</html>
