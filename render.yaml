@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: quiz-ouro-safra
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /healthz
+    envVars:
+      - key: HOST_PIN
+        value: "1234"
+      - key: NODE_VERSION
+        value: "20"

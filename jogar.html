@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#FBF7EC">
+<title>Quiz Ouro Safra</title>
+<link rel="stylesheet" href="/estilo.css">
+<style>
+  body { min-height: 100dvh; }
+  #app { position: relative; z-index: 1; min-height: 100dvh; display: flex; flex-direction: column; padding: max(14px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom)); }
+  header { display: flex; align-items: center; justify-content: space-between; padding: 4px 2px 12px; }
+  header .marca { font-size: 15px; }
+  .pontos { font-weight: 800; background: var(--papel); border-radius: 999px; padding: 6px 12px; box-shadow: var(--sombra); font-size: 14px; }
+  .pontos b { color: var(--verde); }
+  .tela { flex: 1; display: none; flex-direction: column; }
+  .tela.ativa { display: flex; animation: entra .3s ease both; }
+  .centro { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 14px; padding: 10px; }
+  h1 { margin: 0; font-size: 26px; font-weight: 900; line-height: 1.15; }
+  h1 span { color: var(--verde); }
+  p { margin: 0; color: var(--marrom-2); font-weight: 600; font-size: 16px; line-height: 1.4; }
+
+  /* Cadastro */
+  form { padding: 22px 18px; display: flex; flex-direction: column; gap: 14px; width: 100%; max-width: 420px; text-align: left; }
+  label { font-weight: 800; font-size: 14px; display: flex; flex-direction: column; gap: 6px; }
+  input { font: inherit; font-size: 17px; font-weight: 600; padding: 14px; border-radius: 14px; border: 2px solid var(--linha); background: var(--creme); color: var(--marrom); outline: none; }
+  input:focus { border-color: var(--ouro); background: #fff; }
+  .erro { color: var(--erro); font-weight: 700; font-size: 14px; min-height: 1em; }
+  form .btn { font-size: 18px; padding: 16px; margin-top: 4px; }
+
+  .icone { width: 84px; height: 84px; border-radius: 50%; display: grid; place-items: center; font-size: 42px; animation: pop .5s ease both; }
+  .icone.espera { background: var(--ouro-suave); }
+  .espera-dots span { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--ouro); margin: 0 4px; animation: pulso 1s infinite; }
+  .espera-dots span:nth-child(2) { animation-delay: .2s; } .espera-dots span:nth-child(3) { animation-delay: .4s; }
+  .eu { background: var(--papel); border-radius: 16px; padding: 12px 18px; box-shadow: var(--sombra); font-weight: 800; }
+  .eu small { display: block; font-weight: 600; color: var(--marrom-2); }
+
+  /* Pergunta */
+  .q-topo { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+  .q-topo .num { font-weight: 800; color: var(--verde); font-size: 13px; text-transform: uppercase; letter-spacing: .04em; }
+  .q-topo .tempo { margin-left: auto; font-weight: 900; font-size: 20px; min-width: 52px; text-align: center; background: var(--papel); border-radius: 999px; padding: 4px 10px; box-shadow: var(--sombra); }
+  .q-topo .tempo.fim { color: var(--erro); }
+  .barra-tempo { height: 6px; border-radius: 3px; background: var(--linha); overflow: hidden; margin-bottom: 12px; }
+  .barra-tempo div { height: 100%; background: var(--verde); width: 100%; }
+  .q-texto { padding: 16px; font-size: 18px; font-weight: 800; line-height: 1.3; margin-bottom: 12px; text-align: center; }
+  .botoes { flex: 1; display: grid; grid-template-rows: repeat(var(--n, 4), 1fr); gap: 10px; }
+  .opcao { border: 0; border-radius: 18px; display: flex; align-items: center; gap: 14px; padding: 14px 18px; font-size: 18px; font-weight: 800; text-align: left; min-height: 64px; box-shadow: 0 5px 0 rgba(0,0,0,.18); transition: transform .08s, box-shadow .08s, opacity .2s; }
+  .opcao:active { transform: translateY(4px); box-shadow: 0 1px 0 rgba(0,0,0,.18); }
+  .opcao .forma { width: 28px; height: 28px; }
+  .opcao:disabled { opacity: .5; }
+
+  /* Resultado */
+  .res-ok .icone { background: var(--verde); color: #fff; }
+  .res-erro .icone { background: var(--erro); color: #fff; }
+  .res-nao .icone { background: var(--linha); }
+  .ganho { font-size: 40px; font-weight: 900; color: var(--verde); animation: pop .5s .15s ease both; }
+  .posicao { font-size: 18px; font-weight: 800; }
+  .posicao b { color: var(--ouro); font-size: 34px; display: block; }
+  .seq { background: var(--ouro-suave); border-radius: 999px; padding: 6px 14px; font-weight: 800; font-size: 14px; }
+  .certa-era { font-size: 15px; font-weight: 700; color: var(--marrom-2); }
+  .certa-era b { color: var(--marrom); }
+  .trofeu { font-size: 64px; animation: pop .6s ease both; }
+  .conexao { position: fixed; top: 8px; left: 50%; transform: translateX(-50%); background: var(--erro); color: #fff; padding: 6px 14px; border-radius: 999px; font-weight: 700; font-size: 13px; z-index: 20; }
+</style>
+</head>
+<body>
+<div id="fundo"></div>
+<div class="conexao hidden" id="conexao">Reconectando…</div>
+<div id="app">
+  <header>
+    <div class="marca" id="marca"></div>
+    <div class="pontos hidden" id="pontos"><b id="meusPts">0</b> pts</div>
+  </header>
+
+  <!-- Cadastro -->
+  <section class="tela" id="t-cadastro">
+    <div class="centro">
+      <h1>Quiz do <span>Treinamento</span></h1>
+      <p>Preencha seus dados para participar</p>
+      <form class="cartao" id="form" autocomplete="on">
+        <label>Nome
+          <input id="nome" name="name" autocomplete="name" maxlength="40" placeholder="Seu nome" required>
+        </label>
+        <label>Empresa / Filial
+          <input id="empresa" name="organization" autocomplete="organization" maxlength="60" placeholder="Ex.: Unidade Pilar do Sul" required>
+        </label>
+        <div class="erro" id="erro"></div>
+        <button class="btn" id="btnEntrar">Entrar no quiz</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- Aguardando -->
+  <section class="tela" id="t-espera">
+    <div class="centro">
+      <div class="icone espera">🌾</div>
+      <h1 id="esperaTitulo">Você está dentro!</h1>
+      <p id="esperaTexto">Olhe para o telão. O quiz vai começar em instantes.</p>
+      <div class="eu" id="eu"></div>
+      <div class="espera-dots"><span></span><span></span><span></span></div>
+    </div>
+  </section>
+
+  <!-- Pergunta -->
+  <section class="tela" id="t-pergunta">
+    <div class="q-topo"><span class="num" id="qNum"></span><span class="tempo" id="tempo">20</span></div>
+    <div class="barra-tempo"><div id="barra"></div></div>
+    <div class="q-texto cartao" id="qTexto"></div>
+    <div class="botoes" id="botoes"></div>
+  </section>
+
+  <!-- Resposta enviada -->
+  <section class="tela" id="t-enviada">
+    <div class="centro">
+      <div class="icone espera">⏳</div>
+      <h1>Resposta enviada!</h1>
+      <p>Aguarde o tempo acabar para ver se acertou.</p>
+      <div class="espera-dots"><span></span><span></span><span></span></div>
+    </div>
+  </section>
+
+  <!-- Resultado da pergunta -->
+  <section class="tela" id="t-resultado">
+    <div class="centro" id="resultado"></div>
+  </section>
+
+  <!-- Final -->
+  <section class="tela" id="t-final">
+    <div class="centro" id="final"></div>
+  </section>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="/comum.js"></script>
+<script>
+const socket = io({ transports: ['websocket', 'polling'] });
+let token = localStorage.getItem('quizToken') || '';
+let S = null;
+let raf = null;
+let enviando = false;
+
+$('#fundo').innerHTML = ondas();
+montarMarca($('#marca'));
+const salvo = JSON.parse(localStorage.getItem('quizDados') || '{}');
+if (salvo.nome) $('#nome').value = salvo.nome;
+if (salvo.empresa) $('#empresa').value = salvo.empresa;
+
+function mostrar(id) { document.querySelectorAll('.tela').forEach((t) => t.classList.toggle('ativa', t.id === id)); }
+
+socket.on('connect', () => {
+  $('#conexao').classList.add('hidden');
+  if (token) socket.emit('player:resume', token, (r) => { if (!r.ok) { token = ''; localStorage.removeItem('quizToken'); mostrar('t-cadastro'); } });
+  else mostrar('t-cadastro');
+});
+socket.on('disconnect', () => $('#conexao').classList.remove('hidden'));
+socket.on('player:reset', () => { token = ''; localStorage.removeItem('quizToken'); S = null; $('#pontos').classList.add('hidden'); mostrar('t-cadastro'); });
+
+$('#form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const nome = $('#nome').value.trim(), empresa = $('#empresa').value.trim();
+  $('#btnEntrar').disabled = true; $('#erro').textContent = '';
+  socket.emit('player:join', { nome, empresa }, (r) => {
+    $('#btnEntrar').disabled = false;
+    if (!r.ok) { $('#erro').textContent = r.msg; return; }
+    token = r.token;
+    localStorage.setItem('quizToken', token);
+    localStorage.setItem('quizDados', JSON.stringify({ nome, empresa }));
+  });
+});
+
+socket.on('player:state', (st) => { if (st.question) syncClock(st.question.serverNow); S = st; render(); });
+
+function render() {
+  if (!S || S.phase === 'register') return mostrar('t-cadastro');
+  $('#pontos').classList.remove('hidden');
+  $('#meusPts').textContent = fmt(S.me.score);
+  cancelAnimationFrame(raf);
+
+  if (S.phase === 'lobby') {
+    $('#esperaTitulo').textContent = 'Você está dentro!';
+    $('#esperaTexto').textContent = 'Olhe para o telão. O quiz vai começar em instantes.';
+    $('#eu').innerHTML = `${esc(S.me.nome)}<small>${esc(S.me.empresa)}</small>`;
+    return mostrar('t-espera');
+  }
+  if (S.phase === 'question') {
+    if (S.answered) return mostrar('t-enviada');
+    return renderPergunta();
+  }
+  if (S.phase === 'reveal' || S.phase === 'ranking') return renderResultado();
+  if (S.phase === 'final') return renderFinal();
+}
+
+function renderPergunta() {
+  const q = S.question;
+  mostrar('t-pergunta');
+  enviando = false;
+  $('#qNum').textContent = `Pergunta ${q.index + 1} de ${q.total}`;
+  $('#qTexto').textContent = q.pergunta;
+  const b = $('#botoes');
+  b.style.setProperty('--n', q.alternativas.length);
+  b.innerHTML = q.alternativas.map((a, i) =>
+    `<button class="opcao alt-${i}" data-i="${i}">${FORMAS[i]}<span>${esc(a)}</span></button>`).join('');
+  b.querySelectorAll('.opcao').forEach((btn) => btn.addEventListener('click', () => responder(Number(btn.dataset.i))));
+  const tick = () => {
+    const rest = Math.max(0, q.endsAt - agora());
+    $('#tempo').textContent = Math.ceil(rest / 1000);
+    $('#tempo').classList.toggle('fim', rest < 5000);
+    $('#barra').style.width = (rest / (q.tempo * 1000) * 100) + '%';
+    if (rest > 0) raf = requestAnimationFrame(tick);
+  };
+  tick();
+}
+
+function responder(i) {
+  if (enviando) return;
+  enviando = true;
+  if (navigator.vibrate) navigator.vibrate(30);
+  document.querySelectorAll('.opcao').forEach((b) => b.disabled = true);
+  socket.emit('player:answer', i, (r) => {
+    if (!r.ok) {
+      enviando = false;
+      document.querySelectorAll('.opcao').forEach((b) => b.disabled = false);
+      if (r.msg === 'Tempo encerrado' || r.msg === 'Você já respondeu') mostrar('t-enviada');
+    }
+  });
+}
+
+function ordinal(n) { return n + 'º'; }
+
+function renderResultado() {
+  mostrar('t-resultado');
+  const q = S.question;
+  let html;
+  if (!S.answered) {
+    html = `<div class="res-nao centro" style="flex:0"><div class="icone">⏰</div><h1>Tempo esgotado</h1><p>Você não respondeu esta pergunta.</p></div>`;
+  } else if (S.correct) {
+    html = `<div class="res-ok centro" style="flex:0"><div class="icone">✓</div><h1>Correto!</h1><div class="ganho">+${fmt(S.points)}</div>
+      ${S.streak >= 2 ? `<div class="seq">🔥 ${S.streak} acertos seguidos</div>` : ''}</div>`;
+  } else {
+    html = `<div class="res-erro centro" style="flex:0"><div class="icone">✕</div><h1>Não foi dessa vez</h1>
+      <p class="certa-era">Resposta certa: <b>${esc(q.alternativas[S.correta])}</b></p></div>`;
+  }
+  html += `<div class="posicao">Você está em <b>${ordinal(S.pos)}</b> de ${fmt(S.totalPlayers)} participantes</div>`;
+  $('#resultado').innerHTML = html;
+}
+
+function renderFinal() {
+  mostrar('t-final');
+  const medalha = S.pos === 1 ? '🥇' : S.pos === 2 ? '🥈' : S.pos === 3 ? '🥉' : '🌾';
+  $('#final').innerHTML = `<div class="trofeu">${medalha}</div><h1>Fim do quiz!</h1>
+    <div class="posicao">Você ficou em <b>${ordinal(S.pos)}</b> de ${fmt(S.totalPlayers)} participantes</div>
+    <div class="ganho">${fmt(S.me.score)} pts</div><p>Obrigado por participar, ${esc(S.me.nome.split(' ')[0])}!</p>`;
+}
+</script>
+</body>
+</html>
