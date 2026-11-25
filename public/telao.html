@@ -78,6 +78,7 @@
   .item .quem { flex: 1; min-width: 0; }
   .item .quem b { display: block; font-size: 1.05rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .item .quem small { display: block; color: var(--marrom-2); font-weight: 600; font-size: .78rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item .tempo-resp { font-weight: 800; font-size: 1rem; color: var(--verde); background: var(--verde-suave); border-radius: 999px; padding: .2em .7em; white-space: nowrap; }
   .item .pts { font-weight: 900; font-size: 1.15rem; color: var(--marrom-2); white-space: nowrap; }
   .item.ok .pts { color: var(--verde); }
   .item .total { font-size: .78rem; font-weight: 700; color: var(--marrom-2); text-align: right; }
@@ -85,21 +86,26 @@
 
   /* Ranking */
   #ranking, #final { flex-direction: column; align-items: center; }
-  .titulo { font-size: 2.4rem; font-weight: 900; margin: 0 0 .9rem; text-align: center; }
+  .titulo { font-size: 2.2rem; font-weight: 900; margin: 0 0 .5rem; text-align: center; }
   .titulo span { color: var(--ouro-texto); }
-  .rank { width: min(100%, 64rem); flex: 1; min-height: 0; display: flex; flex-direction: column; gap: .5rem; position: relative; }
-  .linha { display: flex; align-items: center; gap: 1rem; padding: .4rem 1rem; flex: 1 1 0; min-height: 0; max-height: 4rem; position: relative; overflow: hidden; transition: transform .7s cubic-bezier(.3,.9,.3,1); }
+  .rank { width: min(100%, 64rem); flex: 1; min-height: 0; display: flex; flex-direction: column; gap: .35rem; position: relative; }
+  .linha { display: flex; align-items: center; gap: 1rem; padding: .2rem 1rem; flex: 1 1 0; min-height: 0; max-height: 3.4rem; position: relative; overflow: hidden; transition: transform .7s cubic-bezier(.3,.9,.3,1); }
   .linha .preench { position: absolute; inset: 0 auto 0 0; background: var(--ouro-suave); transition: width 1s ease; z-index: 0; }
   .linha > *:not(.preench) { position: relative; z-index: 1; }
-  .linha .pos { width: 2.6rem; height: 2.6rem; border-radius: 50%; display: grid; place-items: center; font-weight: 900; font-size: 1.25rem; background: var(--creme); }
+  .linha .pos { width: 2.2rem; height: 2.2rem; flex: none; border-radius: 50%; display: grid; place-items: center; font-weight: 900; font-size: 1.25rem; background: var(--creme); }
   .linha:nth-child(1) .pos { background: var(--ouro); }
   .linha:nth-child(2) .pos { background: #D9D4C7; }
   .linha:nth-child(3) .pos { background: #D8A47A; }
-  .linha .n { flex: 1; min-width: 0; font-weight: 800; font-size: 1.4rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .linha .n { flex: 1; min-width: 0; font-weight: 800; font-size: 1.25rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .linha .n small { font-weight: 600; color: var(--marrom-2); font-size: .7em; margin-left: .5em; }
   .linha .delta { font-weight: 800; font-size: 1rem; color: var(--verde); width: 3.4rem; text-align: right; }
   .linha .delta.caiu { color: var(--erro); }
-  .linha .p { font-weight: 900; font-size: 1.45rem; min-width: 6rem; text-align: right; }
+  .linha .p { font-weight: 900; font-size: 1.3rem; min-width: 6.5rem; text-align: right; }
+  .linha .rodada { font-weight: 900; font-size: 1.05rem; color: #fff; background: var(--verde); border-radius: 999px; padding: .2em .75em; min-width: 5.2rem; text-align: center; animation: pop .5s .8s ease both; }
+  .linha .rodada.zero { background: var(--linha); color: var(--marrom-2); }
+  .rank-cab { width: min(100%, 64rem); display: flex; justify-content: flex-end; gap: 1rem; padding: 0 1rem .35rem; font-size: .8rem; font-weight: 800; color: var(--marrom-2); text-transform: uppercase; letter-spacing: .05em; }
+  .rank-cab span:first-child { min-width: 5.2rem; text-align: center; }
+  .rank-cab span:last-child { min-width: 6.5rem; text-align: right; }
 
   /* Pódio */
   .podio { display: flex; align-items: flex-end; justify-content: center; gap: 1.4rem; margin-top: 1rem; }
@@ -194,6 +200,7 @@
     <!-- RANKING -->
     <section class="tela" id="ranking">
       <div class="titulo" id="rankTitulo">Ranking</div>
+      <div class="rank-cab"><span>Nesta rodada</span><span>Total</span></div>
       <div class="rank" id="rank"></div>
     </section>
 
@@ -280,9 +287,9 @@ socket.on('host:live', (d) => {
   const novos = d.events.slice(-12);
   for (const ev of novos) {
     const div = document.createElement('div');
-    div.className = 'item' + (ev.correct ? ' ok' : '');
-    div.innerHTML = `<div class="quem"><b>${esc(ev.nome)}</b><small>${esc(ev.empresa)} · ${(ev.ms / 1000).toFixed(1).replace('.', ',')}s</small></div>
-      <div><div class="pts">+${fmt(ev.points)}</div><div class="total">${fmt(ev.score)} pts</div></div>`;
+    div.className = 'item';
+    div.innerHTML = `<div class="quem"><b>${esc(ev.nome)}</b><small>${esc(ev.empresa)}</small></div>
+      <div class="tempo-resp">${(ev.ms / 1000).toFixed(1).replace('.', ',')}s</div>`;
     feed.prepend(div);
   }
   while (feed.children.length > 14) feed.lastElementChild.remove();
@@ -370,18 +377,19 @@ function renderRanking() {
   mostrar('ranking');
   const q = S.question;
   $('#rankTitulo').innerHTML = `Ranking após a pergunta <span>${q.index + 1}</span>`;
-  const top = S.ranking.slice(0, 10);
+  const top = S.ranking.slice(0, 15);
   const max = Math.max(1, top[0] ? top[0].score : 1);
   const el = $('#rank');
   el.innerHTML = top.map((p) => {
     const antes = rankAnterior.get(p.id);
     let delta = '';
     if (antes && antes !== p.pos) delta = antes > p.pos ? `▲ ${antes - p.pos}` : `▼ ${p.pos - antes}`;
-    return `<div class="linha cartao" data-id="${esc(p.id)}" data-antes="${antes || 11}">
+    return `<div class="linha cartao" data-id="${esc(p.id)}" data-antes="${antes || 16}">
       <div class="preench" style="width:0" data-w="${Math.round(p.score / max * 100)}"></div>
       <div class="pos">${p.pos}</div>
       <div class="n">${esc(p.nome)}<small>${esc(p.empresa)}</small></div>
       <div class="delta ${delta.startsWith('▼') ? 'caiu' : ''}">${delta}</div>
+      <div class="rodada ${p.rodada > 0 ? '' : 'zero'}">+${fmt(p.rodada)}</div>
       <div class="p">${fmt(p.score)}</div></div>`;
   }).join('') || '<div class="vazio">Ninguém pontuou ainda</div>';
   // animação: cada linha sai da posição anterior e desliza até a nova
@@ -390,8 +398,8 @@ function renderRanking() {
   linhas.forEach((l, i) => {
     const antes = Number(l.dataset.antes) - 1;
     l.style.transition = 'none';
-    l.style.transform = `translateY(${(Math.min(antes, 10) - i) * passo}px)`;
-    l.style.opacity = antes >= 10 ? '0' : '1';
+    l.style.transform = `translateY(${(Math.min(antes, 15) - i) * passo}px)`;
+    l.style.opacity = antes >= 15 ? '0' : '1';
   });
   requestAnimationFrame(() => requestAnimationFrame(() => {
     linhas.forEach((l) => {
