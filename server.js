@@ -48,12 +48,23 @@ const game = {
 };
 
 const clean = (s, max) => String(s || '').replace(/\s+/g, ' ').trim().slice(0, max);
-const publicPlayer = (p) => ({ id: p.id, nome: p.nome, empresa: p.empresa, score: p.score });
+// Enquanto a pergunta está aberta, ninguém vê os pontos da rodada (nem no telão nem no celular):
+// a pontuação exibida é a de antes da pergunta, até o tempo acabar.
+function rodada(p) { const a = game.answers.get(p.token); return a ? a : null; }
+function visivel(p) {
+  const a = game.phase === 'question' ? rodada(p) : null;
+  return { score: p.score - (a ? a.points : 0), ms: p.totalMs - (a ? a.ms : 0) };
+}
+const publicPlayer = (p) => ({ id: p.id, nome: p.nome, empresa: p.empresa, score: visivel(p).score });
 
 function ranking() {
   return [...game.players.values()]
-    .sort((a, b) => b.score - a.score || a.totalMs - b.totalMs || a.joinedAt - b.joinedAt)
-    .map((p, i) => ({ ...publicPlayer(p), pos: i + 1 }));
+    .map((p) => ({ p, v: visivel(p) }))
+    .sort((a, b) => b.v.score - a.v.score || a.v.ms - b.v.ms || a.p.joinedAt - b.p.joinedAt)
+    .map(({ p }, i) => {
+      const a = game.phase === 'question' ? null : rodada(p);
+      return { ...publicPlayer(p), pos: i + 1, rodada: a ? a.points : 0, respondeu: !!a };
+    });
 }
 
 function positionOf(token) {
@@ -132,7 +143,7 @@ function flushLive() {
   if (!liveQueue.length) return;
   const events = liveQueue; liveQueue = [];
   io.to('hosts').emit('host:live', {
-    events, answered: game.answers.size, playersCount: game.players.size, ranking: ranking().slice(0, 10),
+    events, answered: game.answers.size, playersCount: game.players.size,
   });
 }
 
@@ -202,7 +213,7 @@ function answer(token, choice) {
   p.totalMs += ms;
   p.streak = correct ? p.streak + 1 : 0;
   p.history[game.qIndex] = { choice, correct, points, ms };
-  pushLive({ id: p.id, nome: p.nome, empresa: p.empresa, points, score: p.score, correct, ms });
+  pushLive({ id: p.id, nome: p.nome, empresa: p.empresa, ms }); // sem pontos nem acerto: só revela no fim do tempo
   // todos responderam? encerra antes do tempo
   const online = [...game.players.values()].filter((x) => x.online).length;
   if (game.answers.size >= Math.max(1, online)) setTimeout(endQuestion, 800);
