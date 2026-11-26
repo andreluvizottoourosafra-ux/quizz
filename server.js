@@ -47,6 +47,25 @@ const game = {
   answers: new Map(), // token -> {choice, points, correct, ms}
 };
 
+// Qualquer cliente pode mandar mensagens malformadas: nunca deixar isso derrubar o servidor
+const ack = (cb, v) => { if (typeof cb === 'function') cb(v); };
+process.on('uncaughtException', (e) => console.error('Erro não tratado (servidor segue no ar):', e));
+process.on('unhandledRejection', (e) => console.error('Promessa rejeitada (servidor segue no ar):', e));
+
+// PIN: após 5 erros seguidos, o IP fica bloqueado por 60 s (vale para o telão e para o CSV)
+const tentativas = new Map(); // ip -> {erros, ate}
+function pinOk(ip, pin) {
+  const t = tentativas.get(ip) || { erros: 0, ate: 0 };
+  if (Date.now() < t.ate) return false;
+  if (String(pin) === HOST_PIN) { tentativas.delete(ip); return true; }
+  t.erros++;
+  if (t.erros >= 5) { t.erros = 0; t.ate = Date.now() + 60000; }
+  tentativas.set(ip, t);
+  return false;
+}
+const ipDe = (socket) => String(socket.handshake.headers['x-forwarded-for'] || socket.handshake.address || '').split(',')[0].trim();
+const MAX_PLAYERS = Number(process.env.MAX_PLAYERS || 2000);
+
 const clean = (s, max) => String(s || '').replace(/\s+/g, ' ').trim().slice(0, max);
 // Enquanto a pergunta está aberta, ninguém vê os pontos da rodada (nem no telão nem no celular):
 // a pontuação exibida é a de antes da pergunta, até o tempo acabar.
@@ -226,20 +245,25 @@ function answer(token, choice) {
   pushLive({ id: p.id, nome: p.nome, empresa: p.empresa, ms }); // sem pontos nem acerto: só revela no fim do tempo
   // todos responderam? encerra antes do tempo
   const online = [...game.players.values()].filter((x) => x.online).length;
-  if (game.answers.size >= Math.max(1, online)) setTimeout(endQuestion, 800);
+  if (game.answers.size >= Math.max(1, online)) {
+    const qi = game.qIndex;
+    setTimeout(() => { if (game.qIndex === qi) endQuestion(); }, 800);
+  }
   return { ok: true };
 }
 
 // ---------- Socket.io ----------
 io.on('connection', (socket) => {
+  const on = socket.on.bind(socket);
+  socket.on = (ev, fn) => on(ev, (...a) => { try { fn(...a); } catch (e) { console.error(`Erro em ${ev}:`, e.message); } });
   // ---- Telão: qualquer um pode assistir (QR Code, perguntas, ranking); comandos exigem PIN
   socket.on('host:watch', () => { socket.join('hosts'); socket.emit('host:state', hostState()); });
   // ---- Apresentador (telão)
   socket.on('host:auth', (pin, cb) => {
-    if (String(pin) !== HOST_PIN) return cb && cb({ ok: false });
+    if (!pinOk(ipDe(socket), pin)) return ack(cb, { ok: false });
     socket.data.host = true;
     socket.join('hosts');
-    cb && cb({ ok: true });
+    ack(cb, { ok: true });
     socket.emit('host:state', hostState());
   });
   const hostOnly = (fn) => (...args) => { if (socket.data.host) fn(...args); };
@@ -259,9 +283,9 @@ io.on('connection', (socket) => {
   // ---- Participante
   socket.on('player:resume', (token, cb) => {
     const p = game.players.get(String(token || ''));
-    if (!p) return cb && cb({ ok: false });
+    if (!p) return ack(cb, { ok: false });
     p.socketId = socket.id; p.online = true; socket.data.token = p.token;
-    cb && cb({ ok: true });
+    ack(cb, { ok: true });
     sendPlayer(p);
     agendarHost();
   });
@@ -269,9 +293,10 @@ io.on('connection', (socket) => {
   socket.on('player:join', (data, cb) => {
     const nome = clean(data && data.nome, 40);
     const empresa = clean(data && data.empresa, 60);
-    if (nome.length < 2) return cb && cb({ ok: false, msg: 'Informe seu nome.' });
-    if (empresa.length < 2) return cb && cb({ ok: false, msg: 'Informe sua empresa / filial.' });
-    if (game.phase === 'final') return cb && cb({ ok: false, msg: 'O quiz já terminou.' });
+    if (nome.length < 2) return ack(cb, { ok: false, msg: 'Informe seu nome.' });
+    if (empresa.length < 2) return ack(cb, { ok: false, msg: 'Informe sua empresa / filial.' });
+    if (game.phase === 'final') return ack(cb, { ok: false, msg: 'O quiz já terminou.' });
+    if (game.players.size >= MAX_PLAYERS) return ack(cb, { ok: false, msg: 'Limite de participantes atingido.' });
     const token = crypto.randomBytes(16).toString('hex');
     const p = {
       token, id: crypto.randomBytes(6).toString('hex'), nome, empresa, score: 0, streak: 0, totalMs: 0,
@@ -280,14 +305,14 @@ io.on('connection', (socket) => {
     game.players.set(token, p);
     invalidarRanking();
     socket.data.token = token;
-    cb && cb({ ok: true, token });
+    ack(cb, { ok: true, token });
     sendPlayer(p);
     agendarHost();
   });
 
   socket.on('player:answer', (choice, cb) => {
     const res = answer(socket.data.token, choice);
-    cb && cb(res);
+    ack(cb, res);
     const p = game.players.get(socket.data.token);
     if (p && res.ok) sendPlayer(p);
   });
@@ -325,8 +350,9 @@ app.get('/logo', (req, res) => {
 
 // Resultados em CSV (abre no Excel). Ex.: /resultados.csv?pin=1234
 app.get('/resultados.csv', (req, res) => {
-  if (String(req.query.pin) !== HOST_PIN) return res.status(403).send('PIN inválido');
+  if (!pinOk(String(req.ip), req.query.pin)) return res.status(403).send('PIN inválido');
   const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const txt = (v) => (/^[=+\-@\t\r]/.test(String(v)) ? "'" + v : v); // evita injeção de fórmula no Excel
   const head = ['Posição', 'Nome', 'Empresa/Filial', 'Pontuação', 'Acertos'];
   QUESTIONS.forEach((_, i) => head.push(`P${i + 1} resposta`, `P${i + 1} acertou`, `P${i + 1} pontos`, `P${i + 1} tempo (s)`));
   const rows = [head.map(esc).join(';')];
@@ -334,7 +360,7 @@ app.get('/resultados.csv', (req, res) => {
   for (const item of r) {
     const p = [...game.players.values()].find((x) => x.id === item.id);
     const acertos = p.history.filter((h) => h && h.correct).length;
-    const row = [item.pos, p.nome, p.empresa, p.score, acertos];
+    const row = [item.pos, txt(p.nome), txt(p.empresa), p.score, acertos];
     QUESTIONS.forEach((q, i) => {
       const h = p.history[i];
       row.push(h ? String.fromCharCode(65 + h.choice) : '', h ? (h.correct ? 'Sim' : 'Não') : '', h ? h.points : 0, h ? (h.ms / 1000).toFixed(1).replace('.', ',') : '');
