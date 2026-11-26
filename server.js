@@ -57,20 +57,27 @@ function visivel(p) {
 }
 const publicPlayer = (p) => ({ id: p.id, nome: p.nome, empresa: p.empresa, score: visivel(p).score });
 
-function ranking() {
-  return [...game.players.values()]
+// O ranking é calculado uma vez e reaproveitado (antes era recalculado para cada jogador,
+// o que pesava com centenas de pessoas). É invalidado quando algo que o altera muda.
+let rankCache = null;
+function invalidarRanking() { rankCache = null; }
+function calcRanking() {
+  const list = [...game.players.values()]
     .map((p) => ({ p, v: visivel(p) }))
     .sort((a, b) => b.v.score - a.v.score || a.v.ms - b.v.ms || a.p.joinedAt - b.p.joinedAt)
     .map(({ p }, i) => {
       const a = game.phase === 'question' ? null : rodada(p);
       return { ...publicPlayer(p), pos: i + 1, rodada: a ? a.points : 0, respondeu: !!a };
     });
+  return { list, pos: new Map(list.map((x) => [x.id, x.pos])) };
 }
+function ranking() { if (!rankCache) rankCache = calcRanking(); return rankCache.list; }
 
 function positionOf(token) {
-  const r = ranking();
   const p = game.players.get(token);
-  return p ? r.findIndex((x) => x.id === p.id) + 1 : 0;
+  if (!p) return 0;
+  ranking();
+  return rankCache.pos.get(p.id) || 0;
 }
 
 function currentQuestionPublic() {
@@ -126,10 +133,13 @@ function playerState(token) {
   return base;
 }
 
-function broadcastHost() { io.to('hosts').emit('host:state', hostState()); }
+function broadcastHost() { clearTimeout(hostTimer); hostTimer = null; io.to('hosts').emit('host:state', hostState()); }
+// Entradas/saídas de jogadores são agrupadas: no máximo uma atualização do telão a cada 300 ms
+let hostTimer = null;
+function agendarHost() { if (!hostTimer) hostTimer = setTimeout(broadcastHost, 300); }
 function sendPlayer(p) { if (p.socketId) io.to(p.socketId).emit('player:state', playerState(p.token)); }
 function broadcastPlayers() { for (const p of game.players.values()) sendPlayer(p); }
-function broadcastAll() { broadcastHost(); broadcastPlayers(); }
+function broadcastAll() { invalidarRanking(); broadcastHost(); broadcastPlayers(); }
 
 // Fila de respostas ao vivo para o telão (batch)
 let liveQueue = [];
@@ -242,6 +252,7 @@ io.on('connection', (socket) => {
       if (p.socketId) io.to(p.socketId).emit('player:reset');
       game.players.delete(t);
     }
+    invalidarRanking();
     broadcastHost();
   }));
 
@@ -252,7 +263,7 @@ io.on('connection', (socket) => {
     p.socketId = socket.id; p.online = true; socket.data.token = p.token;
     cb && cb({ ok: true });
     sendPlayer(p);
-    broadcastHost();
+    agendarHost();
   });
 
   socket.on('player:join', (data, cb) => {
@@ -267,11 +278,11 @@ io.on('connection', (socket) => {
       history: [], joinedAt: Date.now(), socketId: socket.id, online: true,
     };
     game.players.set(token, p);
+    invalidarRanking();
     socket.data.token = token;
     cb && cb({ ok: true, token });
     sendPlayer(p);
-    if (game.phase === 'lobby') io.to('hosts').emit('host:joined', publicPlayer(p));
-    broadcastHost();
+    agendarHost();
   });
 
   socket.on('player:answer', (choice, cb) => {
@@ -283,7 +294,7 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', () => {
     const p = game.players.get(socket.data.token);
-    if (p && p.socketId === socket.id) { p.online = false; p.socketId = null; broadcastHost(); }
+    if (p && p.socketId === socket.id) { p.online = false; p.socketId = null; agendarHost(); }
   });
 });
 
