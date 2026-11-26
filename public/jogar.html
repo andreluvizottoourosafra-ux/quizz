@@ -199,7 +199,7 @@ function renderPergunta() {
   const b = $('#botoes');
   b.style.setProperty('--n', q.alternativas.length);
   b.innerHTML = q.alternativas.map((a, i) =>
-    `<button class="opcao alt-${i}" data-i="${i}">${FORMAS[i]}<span>${esc(a)}</span></button>`).join('');
+    `<button class="opcao alt-${i}" data-i="${i}"><span class="selo-alt">${FORMAS[i]}<span class="letra">${LETRAS[i]}</span></span><span>${esc(a)}</span></button>`).join('');
   b.querySelectorAll('.opcao').forEach((btn) => btn.addEventListener('click', () => responder(Number(btn.dataset.i))));
   const tick = () => {
     const rest = Math.max(0, q.endsAt - agora());

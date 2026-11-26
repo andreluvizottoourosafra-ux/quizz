@@ -354,7 +354,7 @@ function renderPergunta() {
     const cls = revel ? (i === S.correta ? 'certa' : 'errada') : '';
     return `<div class="alt alt-${i} ${cls}">
       <div class="barra" style="height:${revel ? Math.round(qtd / total * 100) : 0}%"></div>
-      ${FORMAS[i]}<span class="txt">${esc(a)}</span>
+      <span class="selo-alt">${FORMAS[i]}<span class="letra">${LETRAS[i]}</span></span><span class="txt">${esc(a)}</span>
       ${revel ? `<span class="check">✓</span><span class="qtd">${fmt(qtd)}</span>` : ''}
     </div>`;
   }).join('');

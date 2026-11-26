@@ -1,9 +1,20 @@
 // Utilitários compartilhados entre telão e celular
+// Ícones próprios das alternativas, com tema do campo: sol, folha, espiga e gota
 const FORMAS = [
-  '<svg class="forma" viewBox="0 0 24 24"><path d="M12 3 22 20H2z"/></svg>',
-  '<svg class="forma" viewBox="0 0 24 24"><path d="M12 2 22 12 12 22 2 12z"/></svg>',
-  '<svg class="forma" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>',
-  '<svg class="forma" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>',
+  // A · Sol
+  '<svg class="forma" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.6"/><g>' +
+    [0, 45, 90, 135, 180, 225, 270, 315].map((a) => `<rect x="11" y="1.2" width="2" height="4.2" rx="1" transform="rotate(${a} 12 12)"/>`).join('') +
+    '</g></svg>',
+  // B · Folha
+  '<svg class="forma" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M20.5 3.5C11 3.6 4.6 8.6 4.6 15.4c0 1.4.3 2.6.8 3.6L3.2 21.2l1.1 1.1 2.3-2.3c1 .6 2.3.9 3.7.9 6.8 0 11.2-6.8 10.2-17.4zM8.2 17.6l-1-1c2.5-3.6 5.6-6.3 9.4-8.2l.6 1.1c-3.6 1.9-6.6 4.6-9 8.1z"/></svg>',
+  // C · Espiga
+  '<svg class="forma" viewBox="0 0 24 24"><rect x="11.2" y="7" width="1.6" height="16.5" rx=".8"/>' +
+    [6.2, 10.6, 15].map((y) =>
+      `<ellipse cx="8.7" cy="${y}" rx="1.55" ry="3" transform="rotate(-38 8.7 ${y})"/>` +
+      `<ellipse cx="15.3" cy="${y}" rx="1.55" ry="3" transform="rotate(38 15.3 ${y})"/>`).join('') +
+    '<ellipse cx="12" cy="3.4" rx="1.6" ry="2.9"/></svg>',
+  // D · Gota
+  '<svg class="forma" viewBox="0 0 24 24"><path d="M12 1.8c-.4 0-.7.2-.9.5C8.6 6 5 10.6 5 15a7 7 0 0 0 14 0c0-4.4-3.6-9-6.1-12.7-.2-.3-.5-.5-.9-.5z"/></svg>',
 ];
 const LETRAS = ['A', 'B', 'C', 'D'];
 
