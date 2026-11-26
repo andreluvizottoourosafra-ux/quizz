@@ -24,6 +24,13 @@
 
   /* Lobby */
   #lobby { gap: 2rem; }
+  .lobby-qr.fechada .qr, .lobby-qr.fechada .url { opacity: .12; filter: grayscale(1); }
+  .lobby-qr .aviso-fechada { display: none; font-weight: 900; font-size: 1.5rem; color: var(--erro); }
+  .lobby-qr.fechada .aviso-fechada { display: block; }
+  body.apresentador .nome-chip, body.apresentador .linha { cursor: pointer; }
+  body.apresentador .nome-chip:hover { border-color: var(--erro); background: #fbe3da; }
+  body.apresentador .linha:hover { outline: 3px solid var(--erro); }
+  .alerta-pin { position: fixed; top: .8rem; left: 50%; transform: translateX(-50%); z-index: 15; background: var(--erro); color: #fff; font-weight: 800; padding: .5em 1.2em; border-radius: 999px; font-size: .9rem; }
   .lobby-qr { flex: 0 0 38%; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem; gap: 1rem; text-align: center; }
   .lobby-qr h1 { margin: 0; font-size: 2.6rem; line-height: 1.1; font-weight: 900; }
   .lobby-qr h1 span { color: var(--verde); }
@@ -146,6 +153,7 @@
   </form>
 </div>
 <div class="conexao hidden" id="conexao">Reconectando…</div>
+<div class="alerta-pin hidden so-apresentador" id="alertaPin">⚠ PIN fraco: troque o HOST_PIN no Render (6 ou mais caracteres)</div>
 
 <div id="app">
   <header>
@@ -164,6 +172,7 @@
         <p>Aponte a câmera do celular para o QR Code</p>
         <div class="qr"><img src="/qr.svg" alt="QR Code para entrar"></div>
         <div class="url" id="url"></div>
+        <div class="aviso-fechada">Entrada encerrada</div>
       </div>
       <div class="lobby-lista cartao">
         <div class="topo">
@@ -216,6 +225,7 @@
     <div class="esq">
       <button class="btn claro" id="btnTela" title="Tela cheia (F)">⛶ Tela cheia</button>
       <button class="btn claro" id="btnLogin">🔒 Apresentador</button>
+      <button class="btn claro so-apresentador" id="btnEntrada">🚪 Fechar entrada</button>
       <button class="btn claro so-apresentador" id="btnReset">↺ Reiniciar</button>
       <a class="btn claro hidden so-apresentador" id="btnCsv" style="text-decoration:none">⬇ Resultados (Excel)</a>
     </div>
@@ -233,7 +243,7 @@
 const socket = io({ transports: ['websocket', 'polling'] });
 let S = null;                 // último estado do servidor
 let pin = sessionStorage.getItem('quizPin') || '';
-let rankAnterior = new Map(); // id -> posição no ranking anterior
+let csvToken = '';
 let ultimaFase = '';
 let ultimaPerg = -1;
 
@@ -245,7 +255,7 @@ fetch('/join-url').then(r => r.json()).then(j => $('#url').textContent = j.url.r
 let autenticado = false;
 function autenticar(p, silencioso) {
   socket.emit('host:auth', p, (res) => {
-    if (res && res.ok) { pin = p; autenticado = true; sessionStorage.setItem('quizPin', p); $('#pin').classList.add('hidden'); }
+    if (res && res.ok) { pin = p; autenticado = true; csvToken = res.csv || ''; $('#alertaPin').classList.toggle('hidden', !res.pinFraco); sessionStorage.setItem('quizPin', p); $('#pin').classList.add('hidden'); }
     else { pin = ''; autenticado = false; sessionStorage.removeItem('quizPin'); if (!silencioso) $('#pinErro').textContent = 'PIN incorreto'; }
     document.body.classList.toggle('apresentador', autenticado);
     render();
@@ -267,6 +277,14 @@ $('#btnReset').onclick = () => {
   if (confirm('Apagar TODOS os participantes e voltar ao QR Code?')) socket.emit('host:reset', false);
 };
 $('#btnTela').onclick = telaCheia;
+$('#btnEntrada').onclick = () => socket.emit('host:entrada', !(S && S.entradaAberta));
+function remover(el) {
+  if (!autenticado || !el) return;
+  const nome = (el.querySelector('.n') || el).firstChild.textContent.trim();
+  if (confirm(`Remover "${nome}" do quiz?`)) { socket.emit('host:kick', el.dataset.id); if (el.classList.contains('linha')) el.remove(); }
+}
+$('#nomes').addEventListener('click', (e) => remover(e.target.closest('.nome-chip')));
+$('#rank').addEventListener('click', (e) => remover(e.target.closest('.linha')));
 function telaCheia() { document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen().catch(() => {}); }
 document.addEventListener('keydown', (e) => {
   if (!$('#pin').classList.contains('hidden')) return;
@@ -308,7 +326,9 @@ function render() {
   $('#chipPerg').textContent = S.question ? `Pergunta ${S.question.index + 1} de ${S.totalQuestions}` : `${S.totalQuestions} perguntas`;
   $('#btnEncerrar').classList.toggle('hidden', fase !== 'question');
   $('#btnCsv').classList.toggle('hidden', fase !== 'final' && fase !== 'ranking');
-  $('#btnCsv').href = '/resultados.csv?pin=' + encodeURIComponent(pin);
+  $('#btnCsv').href = '/resultados.csv?t=' + encodeURIComponent(csvToken);
+  $('#btnEntrada').textContent = S.entradaAberta ? '🚪 Fechar entrada' : '🚪 Reabrir entrada';
+  document.querySelector('.lobby-qr').classList.toggle('fechada', !S.entradaAberta);
   const rotulo = { lobby: 'Iniciar quiz ▶', question: 'Mostrar resposta ▶', reveal: 'Ver ranking ▶',
     ranking: S.question && S.question.index + 1 >= S.totalQuestions ? 'Resultado final 🏆' : 'Próxima pergunta ▶', final: '' }[fase];
   $('#btnNext').textContent = rotulo;
@@ -327,13 +347,12 @@ function renderLobby() {
   $('#lobbyCount').textContent = fmt(S.playersCount);
   const nomes = $('#nomes');
   const ids = new Set(S.players.map((p) => p.id));
-  if (!S.players.length) { nomes.innerHTML = '<div class="vazio">Aguardando os primeiros participantes…</div>'; mostrados.clear(); }
+  if (!S.playersCount) { nomes.innerHTML = '<div class="vazio">Aguardando os primeiros participantes…</div>'; mostrados.clear(); }
   else {
     const vazio = nomes.querySelector('.vazio'); if (vazio) vazio.remove();
     nomes.querySelectorAll('.nome-chip').forEach((c) => { if (!ids.has(c.dataset.id)) { c.remove(); mostrados.delete(c.dataset.id); } });
     for (const p of S.players) if (!mostrados.has(p.id)) { mostrados.add(p.id); nomes.insertAdjacentHTML('afterbegin', chipNome(p)); }
   }
-  rankAnterior = new Map();
 }
 
 // Ajusta o tamanho do texto para que perguntas e alternativas longas nunca estourem a tela
@@ -396,7 +415,7 @@ function renderRanking() {
   const max = Math.max(1, top[0] ? top[0].score : 1);
   const el = $('#rank');
   el.innerHTML = top.map((p) => {
-    const antes = rankAnterior.get(p.id);
+    const antes = p.antes;
     let delta = '';
     if (antes && antes !== p.pos) delta = antes > p.pos ? `▲ ${antes - p.pos}` : `▼ ${p.pos - antes}`;
     return `<div class="linha cartao" data-id="${esc(p.id)}" data-antes="${antes || 16}">
@@ -422,7 +441,6 @@ function renderRanking() {
       const f = l.querySelector('.preench'); f.style.width = f.dataset.w + '%';
     });
   }));
-  rankAnterior = new Map(S.ranking.map((p) => [p.id, p.pos]));
 }
 
 function renderFinal() {
