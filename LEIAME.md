@@ -20,6 +20,11 @@ No celular, o participante vê se acertou, quantos pontos ganhou, quantos acerto
 
 **Atalhos do telão:** `Espaço` ou `→` avança a etapa e `F` liga ou desliga a tela cheia.
 
+**Controles do apresentador (depois do PIN):**
+
+- **🚪 Fechar entrada:** ninguém novo consegue entrar, e quem já está continua jogando. Feche assim que todos tiverem entrado.
+- **Remover participante:** clique no nome na tela de abertura ou numa linha do ranking. Use para nomes impróprios ou cadastros falsos.
+
 ## Editar as perguntas
 
 Edite o arquivo `perguntas.json`:
@@ -69,6 +74,9 @@ Descubra o IP do computador (por exemplo, 192.168.0.10) e abra `http://192.168.0
 |---|---|---|
 | `HOST_PIN` | `1234` | Senha do telão e do download do CSV. Depois de 5 erros seguidos, o IP fica bloqueado por 1 minuto |
 | `MAX_PLAYERS` | `2000` | Limite de participantes cadastrados |
+| `MAX_CONN` | `2500` | Limite de conexões simultâneas |
+| `MAX_POR_IP` | `700` | Conexões por IP. No evento, todos no mesmo Wi-Fi saem pelo mesmo IP, então não abaixe muito |
+| `IP_HEADER` | automático | No Render, usa o `True-Client-IP` do Cloudflare. Só mude se publicar em outro lugar |
 | `PUBLIC_URL` | endereço acessado | Endereço-base do QR Code (o app acrescenta `/jogar`) |
 | `QUESTIONS_FILE` | `perguntas.json` | Usar outro arquivo de perguntas |
 | `PORT` | `3000` | Porta do servidor |
@@ -81,6 +89,13 @@ O que mais pesa no dia é o **Wi-Fi do local**: um roteador comum não aguenta 5
 
 ## Segurança
 
-- Qualquer pessoa pode **assistir** ao telão, mas só quem digita o PIN consegue controlar o quiz ou baixar os resultados.
-- O servidor ignora mensagens malformadas, e uma delas não derruba o quiz.
-- Nomes que começam com `=`, `+`, `-` ou `@` saem com um apóstrofo na planilha, para o Excel não executar como fórmula.
+O app passou por uma bateria de 17 ataques simulados (força bruta do PIN, IP falsificado, flood de mensagens, spam de cadastros, nomes ofensivos e com caracteres invisíveis, XSS, mensagens gigantes, conexões de outros sites, leitura de arquivos, vazamento da resposta certa), e todos foram bloqueados.
+
+- **PIN:** depois de 5 erros, o IP fica bloqueado por 1 minuto. O IP vem do Cloudflare, e não do `X-Forwarded-For`, que o atacante consegue falsificar no Render. Se o PIN for fraco, o telão mostra um aviso só para o apresentador.
+- **Resultados:** o link do Excel usa um código aleatório entregue só ao apresentador. O PIN não aparece mais na URL.
+- **Telão público:** qualquer pessoa pode assistir, mas só quem digita o PIN controla o quiz. O telão recebe só o necessário (últimos 150 nomes e Top 15).
+- **Abuso:** cada conexão aceita até 10 mensagens por segundo, e quem insiste é desconectado. Mensagens maiores que 16 KB derrubam a conexão. Páginas de outros sites não conseguem se conectar. Cada conexão cadastra no máximo 1 participante.
+- **Nomes:** caracteres invisíveis, inversão de texto e acentos empilhados são removidos, e palavrões comuns são recusados. Na planilha, nomes que começam com `=`, `+`, `-` ou `@` recebem um apóstrofo, para o Excel não executar como fórmula.
+- **Respostas:** nenhuma mensagem revela acerto ou pontos antes do fim do tempo.
+
+**Risco que continua:** quem souber o endereço do app pode cadastrar participantes falsos com um script (até 700 por IP). A defesa é **fechar a entrada** depois que todos entrarem e **remover** os falsos com um clique.

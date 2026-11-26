@@ -14,10 +14,55 @@ const QUESTIONS_FILE = process.env.QUESTIONS_FILE || path.join(__dirname, 'pergu
 const MAX_POINTS = 1000;
 const LIVE_BATCH_MS = 150; // agrupa respostas para o telão não engasgar com centenas simultâneas
 
+// ---------- Segurança: limites e identificação do cliente ----------
+const MAX_PLAYERS = Number(process.env.MAX_PLAYERS || 2000); // participantes cadastrados
+const MAX_CONN = Number(process.env.MAX_CONN || 2500);       // conexões simultâneas no total
+const MAX_POR_IP = Number(process.env.MAX_POR_IP || 700);    // por IP (no evento, todos no mesmo Wi-Fi saem pelo mesmo IP)
+const MAX_ESPECTADORES = 30;                                  // telas assistindo ao telão sem PIN
+// IP real do cliente. No Render, o X-Forwarded-For pode ser falsificado (o Render só acrescenta ao fim);
+// o IP confiável vem do Cloudflare, que fica na frente do Render: True-Client-IP / CF-Connecting-IP.
+const IP_HEADER = String(process.env.IP_HEADER || (process.env.RENDER ? 'true-client-ip' : '')).toLowerCase();
+function ipReal(headers, addr) {
+  if (IP_HEADER) {
+    const v = headers[IP_HEADER] || headers['cf-connecting-ip'];
+    if (v) return String(v).split(',')[0].trim();
+  }
+  return String(addr || '').replace(/^::ffff:/, '');
+}
+const conexoesPorIp = new Map();
+let espectadores = 0;
+
 const app = express();
-app.set('trust proxy', true);
+app.set('trust proxy', true); // usado só para saber se o acesso é https (link do QR Code)
+app.disable('x-powered-by');
+app.use((req, res, next) => {
+  const host = String(req.headers.host || '').replace(/[^\w.:-]/g, '');
+  res.set({
+    'X-Frame-Options': 'DENY',
+    'X-Content-Type-Options': 'nosniff',
+    'Referrer-Policy': 'no-referrer',
+    'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; " +
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; " +
+      `img-src 'self' data:; connect-src 'self' wss://${host} ws://${host}; frame-ancestors 'none'; base-uri 'none'; form-action 'self'`,
+  });
+  next();
+});
 const server = http.createServer(app);
-const io = new Server(server, { pingInterval: 10000, pingTimeout: 20000 });
+const io = new Server(server, {
+  pingInterval: 10000, pingTimeout: 20000,
+  maxHttpBufferSize: 16 * 1024, // nenhuma mensagem legítima passa de poucos KB
+  allowRequest: (req, cb) => {
+    // recusa conexões abertas por páginas de outros sites (impede usar visitantes de um site como "robôs")
+    const origin = req.headers.origin;
+    if (origin) {
+      let h = ''; try { h = new URL(origin).host; } catch (e) { /* origem inválida */ }
+      if (![req.headers.host, req.headers['x-forwarded-host']].filter(Boolean).includes(h)) return cb(null, false);
+    }
+    if (io.engine.clientsCount >= MAX_CONN) return cb(null, false);
+    if ((conexoesPorIp.get(ipReal(req.headers, req.socket.remoteAddress)) || 0) >= MAX_POR_IP) return cb(null, false);
+    cb(null, true);
+  },
+});
 
 // ---------- Perguntas ----------
 function loadQuestions() {
@@ -45,6 +90,7 @@ const game = {
   timer: null,
   players: new Map(), // token -> {token,id,nome,empresa,score,streak,answers:[], socketId, online}
   answers: new Map(), // token -> {choice, points, correct, ms}
+  entradaAberta: true,
 };
 
 // Qualquer cliente pode mandar mensagens malformadas: nunca deixar isso derrubar o servidor
@@ -52,21 +98,48 @@ const ack = (cb, v) => { if (typeof cb === 'function') cb(v); };
 process.on('uncaughtException', (e) => console.error('Erro não tratado (servidor segue no ar):', e));
 process.on('unhandledRejection', (e) => console.error('Promessa rejeitada (servidor segue no ar):', e));
 
-// PIN: após 5 erros seguidos, o IP fica bloqueado por 60 s (vale para o telão e para o CSV)
+// PIN: após 5 erros seguidos, o IP fica bloqueado por 60 s
+const iguais = (a, b) => crypto.timingSafeEqual(
+  crypto.createHash('sha256').update(String(a)).digest(), crypto.createHash('sha256').update(String(b)).digest());
 const tentativas = new Map(); // ip -> {erros, ate}
 function pinOk(ip, pin) {
   const t = tentativas.get(ip) || { erros: 0, ate: 0 };
   if (Date.now() < t.ate) return false;
-  if (String(pin) === HOST_PIN) { tentativas.delete(ip); return true; }
+  if (iguais(pin, HOST_PIN)) { tentativas.delete(ip); return true; }
   t.erros++;
   if (t.erros >= 5) { t.erros = 0; t.ate = Date.now() + 60000; }
   tentativas.set(ip, t);
   return false;
 }
-const ipDe = (socket) => String(socket.handshake.headers['x-forwarded-for'] || socket.handshake.address || '').split(',')[0].trim();
-const MAX_PLAYERS = Number(process.env.MAX_PLAYERS || 2000);
+setInterval(() => { const agora = Date.now(); for (const [k, t] of tentativas) if (t.ate < agora && t.erros === 0) tentativas.delete(k); }, 600000).unref();
+const PIN_FRACO = HOST_PIN.length < 6 || /^(.)\1+$/.test(HOST_PIN) ||
+  ['123456', '654321', '12345678', '123123', 'senha', 'admin', 'ourosafra'].includes(HOST_PIN.toLowerCase());
+if (PIN_FRACO) console.warn('ATENÇÃO: HOST_PIN fraco. Use 6 ou mais caracteres, sem sequências óbvias.');
+// Link dos resultados: código aleatório entregue só ao apresentador (o PIN não aparece na URL)
+const CSV_TOKEN = crypto.randomBytes(16).toString('hex');
 
-const clean = (s, max) => String(s || '').replace(/\s+/g, ' ').trim().slice(0, max);
+// Nomes: remove caracteres invisíveis e de controle, inversão de texto (RTL) e acentos empilhados ("zalgo")
+function limparTexto(v, max) {
+  const t = String(v ?? '').slice(0, 500).normalize('NFC')
+    .replace(/[\p{Cc}\p{Cf}\p{Co}\p{Cn}\p{Zl}\p{Zp}]/gu, '')
+    .replace(/(\p{M}{2})\p{M}+/gu, '$1')
+    .replace(/\s+/g, ' ').trim();
+  return Array.from(t).slice(0, max).join('').trim();
+}
+const letras = (t) => (t.match(/[\p{L}\p{N}]/gu) || []).length;
+// Filtro básico de palavrões (o apresentador também pode remover nomes pelo telão)
+const PROIBIDAS = ['porra', 'caralho', 'buceta', 'boceta', 'puta', 'puto', 'putinha', 'merda', 'foda', 'foder', 'fodase',
+  'fdp', 'pqp', 'vsf', 'tnc', 'kct', 'cacete', 'viado', 'cuzao', 'arrombado', 'arrombada', 'otario', 'otaria',
+  'vagabundo', 'vagabunda', 'desgraca', 'desgracado', 'piroca', 'xoxota', 'bosta', 'corno', 'babaca', 'retardado',
+  'imbecil', 'idiota', 'nazista', 'hitler', 'safado', 'safada', 'piranha', 'rapariga'];
+function ofensivo(t) {
+  const n = t.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()
+    .replace(/0/g, 'o').replace(/[1!|]/g, 'i').replace(/3/g, 'e').replace(/[4@]/g, 'a').replace(/[5$]/g, 's').replace(/7/g, 't');
+  const palavras = n.split(/[^a-z]+/);
+  const junto = n.replace(/[^a-z]/g, ''); // pega "p.o.r.r.a" e "p o r r a"
+  return PROIBIDAS.some((w) => palavras.includes(w) || (w.length >= 5 && junto.includes(w)));
+}
+
 // Enquanto a pergunta está aberta, ninguém vê os pontos da rodada (nem no telão nem no celular):
 // a pontuação exibida é a de antes da pergunta, até o tempo acabar.
 function rodada(p) { const a = game.answers.get(p.token); return a ? a : null; }
@@ -86,7 +159,8 @@ function calcRanking() {
     .sort((a, b) => b.v.score - a.v.score || a.v.ms - b.v.ms || a.p.joinedAt - b.p.joinedAt)
     .map(({ p }, i) => {
       const a = game.phase === 'question' ? null : rodada(p);
-      return { ...publicPlayer(p), pos: i + 1, rodada: a ? a.points : 0, respondeu: !!a };
+      const antes = game.phase === 'question' ? null : p.posAnterior || null;
+      return { ...publicPlayer(p), pos: i + 1, rodada: a ? a.points : 0, respondeu: !!a, antes };
     });
   return { list, pos: new Map(list.map((x) => [x.id, x.pos])) };
 }
@@ -116,6 +190,7 @@ function distribution() {
 }
 
 function hostState() {
+  const todos = [...game.players.values()];
   return {
     phase: game.phase,
     question: currentQuestionPublic(),
@@ -123,10 +198,13 @@ function hostState() {
     distribution: game.phase === 'question' ? null : distribution(),
     answered: game.answers.size,
     playersCount: game.players.size,
-    onlineCount: [...game.players.values()].filter((p) => p.online).length,
-    players: [...game.players.values()].map(publicPlayer),
-    ranking: ranking(),
+    onlineCount: todos.filter((p) => p.online).length,
+    // só o que a tela usa: os 150 últimos que entraram (abertura) e o Top 15 (ranking). Antes ia a lista
+    // inteira, e um atacante pedindo o estado em sequência fazia o servidor estourar a memória.
+    players: todos.slice(-150).map(publicPlayer),
+    ranking: ranking().slice(0, 15),
     totalQuestions: QUESTIONS.length,
+    entradaAberta: game.entradaAberta,
   };
 }
 
@@ -180,6 +258,9 @@ function flushLive() {
 function startQuestion(index) {
   clearTimeout(game.timer);
   if (index >= QUESTIONS.length) return finish();
+  // guarda a posição de cada um antes da pergunta, para o ranking mostrar quem subiu ou caiu
+  ranking();
+  for (const p of game.players.values()) p.posAnterior = game.qIndex >= 0 ? rankCache.pos.get(p.id) || null : null;
   game.qIndex = index;
   game.phase = 'question';
   game.answers = new Map();
@@ -214,8 +295,9 @@ function reset(keepPlayers) {
   clearTimeout(game.timer);
   try { QUESTIONS = loadQuestions(); } catch (e) { console.error(e.message); }
   game.phase = 'lobby'; game.qIndex = -1; game.answers = new Map();
-  if (keepPlayers) for (const p of game.players.values()) { p.score = 0; p.streak = 0; p.totalMs = 0; p.history = []; }
+  if (keepPlayers) for (const p of game.players.values()) { p.score = 0; p.streak = 0; p.totalMs = 0; p.history = []; p.posAnterior = null; }
   else {
+    game.entradaAberta = true;
     for (const p of game.players.values()) if (p.socketId) io.to(p.socketId).emit('player:reset');
     game.players.clear();
   }
@@ -254,16 +336,38 @@ function answer(token, choice) {
 
 // ---------- Socket.io ----------
 io.on('connection', (socket) => {
+  const ip = ipReal(socket.handshake.headers, socket.handshake.address);
+  conexoesPorIp.set(ip, (conexoesPorIp.get(ip) || 0) + 1);
+
+  // Um erro em um evento nunca derruba o servidor
   const on = socket.on.bind(socket);
   socket.on = (ev, fn) => on(ev, (...a) => { try { fn(...a); } catch (e) { console.error(`Erro em ${ev}:`, e.message); } });
+
+  // Limite de mensagens por conexão: 10 por segundo em média, rajadas de até 20.
+  // O excedente é descartado, e quem insiste é desconectado.
+  let fichas = 20, ultimo = Date.now(), excessos = 0;
+  socket.use((packet, next) => {
+    const agora = Date.now();
+    fichas = Math.min(20, fichas + (agora - ultimo) / 100); ultimo = agora;
+    if (fichas >= 1) { fichas -= 1; return next(); }
+    if (++excessos > 50) socket.disconnect(true);
+  });
+
   // ---- Telão: qualquer um pode assistir (QR Code, perguntas, ranking); comandos exigem PIN
-  socket.on('host:watch', () => { socket.join('hosts'); socket.emit('host:state', hostState()); });
-  // ---- Apresentador (telão)
-  socket.on('host:auth', (pin, cb) => {
-    if (!pinOk(ipDe(socket), pin)) return ack(cb, { ok: false });
-    socket.data.host = true;
+  socket.on('host:watch', () => {
+    if (socket.data.watch) return; // um pedido por conexão
+    if (!socket.data.host) { if (espectadores >= MAX_ESPECTADORES) return; espectadores++; }
+    socket.data.watch = true;
     socket.join('hosts');
-    ack(cb, { ok: true });
+    socket.emit('host:state', hostState());
+  });
+  // ---- Apresentador
+  socket.on('host:auth', (pin, cb) => {
+    if (!pinOk(ip, pin)) return ack(cb, { ok: false });
+    if (socket.data.watch && !socket.data.host) espectadores--;
+    socket.data.host = true; socket.data.watch = true;
+    socket.join('hosts');
+    ack(cb, { ok: true, csv: CSV_TOKEN, pinFraco: PIN_FRACO });
     socket.emit('host:state', hostState());
   });
   const hostOnly = (fn) => (...args) => { if (socket.data.host) fn(...args); };
@@ -271,10 +375,12 @@ io.on('connection', (socket) => {
   socket.on('host:end', hostOnly(() => endQuestion()));
   socket.on('host:finish', hostOnly(() => finish()));
   socket.on('host:reset', hostOnly((keep) => reset(!!keep)));
+  socket.on('host:entrada', hostOnly((aberta) => { game.entradaAberta = !!aberta; broadcastHost(); }));
   socket.on('host:kick', hostOnly((id) => {
     for (const [t, p] of game.players) if (p.id === id) {
       if (p.socketId) io.to(p.socketId).emit('player:reset');
       game.players.delete(t);
+      game.answers.delete(t);
     }
     invalidarRanking();
     broadcastHost();
@@ -282,7 +388,7 @@ io.on('connection', (socket) => {
 
   // ---- Participante
   socket.on('player:resume', (token, cb) => {
-    const p = game.players.get(String(token || ''));
+    const p = game.players.get(String(token || '').slice(0, 64));
     if (!p) return ack(cb, { ok: false });
     p.socketId = socket.id; p.online = true; socket.data.token = p.token;
     ack(cb, { ok: true });
@@ -291,16 +397,19 @@ io.on('connection', (socket) => {
   });
 
   socket.on('player:join', (data, cb) => {
-    const nome = clean(data && data.nome, 40);
-    const empresa = clean(data && data.empresa, 60);
-    if (nome.length < 2) return ack(cb, { ok: false, msg: 'Informe seu nome.' });
-    if (empresa.length < 2) return ack(cb, { ok: false, msg: 'Informe sua empresa / filial.' });
+    if (socket.data.token && game.players.has(socket.data.token)) return ack(cb, { ok: false, msg: 'Você já está participando.' });
+    const nome = limparTexto(data && data.nome, 40);
+    const empresa = limparTexto(data && data.empresa, 60);
+    if (letras(nome) < 2) return ack(cb, { ok: false, msg: 'Informe seu nome.' });
+    if (letras(empresa) < 2) return ack(cb, { ok: false, msg: 'Informe sua empresa / filial.' });
+    if (ofensivo(nome) || ofensivo(empresa)) return ack(cb, { ok: false, msg: 'Esse nome não é permitido. Use seu nome real.' });
+    if (!game.entradaAberta) return ack(cb, { ok: false, msg: 'A entrada no quiz foi encerrada.' });
     if (game.phase === 'final') return ack(cb, { ok: false, msg: 'O quiz já terminou.' });
     if (game.players.size >= MAX_PLAYERS) return ack(cb, { ok: false, msg: 'Limite de participantes atingido.' });
     const token = crypto.randomBytes(16).toString('hex');
     const p = {
       token, id: crypto.randomBytes(6).toString('hex'), nome, empresa, score: 0, streak: 0, totalMs: 0,
-      history: [], joinedAt: Date.now(), socketId: socket.id, online: true,
+      history: [], joinedAt: Date.now(), socketId: socket.id, online: true, posAnterior: null,
     };
     game.players.set(token, p);
     invalidarRanking();
@@ -318,6 +427,9 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
+    const n = (conexoesPorIp.get(ip) || 1) - 1;
+    if (n > 0) conexoesPorIp.set(ip, n); else conexoesPorIp.delete(ip);
+    if (socket.data.watch && !socket.data.host) espectadores--;
     const p = game.players.get(socket.data.token);
     if (p && p.socketId === socket.id) { p.online = false; p.socketId = null; agendarHost(); }
   });
@@ -348,9 +460,9 @@ app.get('/logo', (req, res) => {
   res.status(404).end();
 });
 
-// Resultados em CSV (abre no Excel). Ex.: /resultados.csv?pin=1234
+// Resultados em CSV (abre no Excel). O link com o código só aparece no telão depois do PIN.
 app.get('/resultados.csv', (req, res) => {
-  if (!pinOk(String(req.ip), req.query.pin)) return res.status(403).send('PIN inválido');
+  if (!iguais(req.query.t || '', CSV_TOKEN)) return res.status(403).send('Acesso negado');
   const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
   const txt = (v) => (/^[=+\-@\t\r]/.test(String(v)) ? "'" + v : v); // evita injeção de fórmula no Excel
   const head = ['Posição', 'Nome', 'Empresa/Filial', 'Pontuação', 'Acertos'];
