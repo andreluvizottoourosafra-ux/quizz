@@ -27,7 +27,7 @@
       "alternativas": [
         "Comprovar que o produtor recebeu os insumos e permitir que a Ouro Safra defina posteriormente o preço dos grãos.",
         "Substituir o contrato de compra dos insumos e garantir que o produtor tenha crédito aprovado.",
-        "Formalizar o compromisso do produtor, estabelecendo as condições da operação, como produto, quantidade, entrega, vencimento e garantias.",
+        "Formalizar o compromisso do produtor, estabelecendo as condições da operação, como o produto, a quantidade, local e data de entrega, vencimento e garantias, além disso a CPR proporciona maior segurança jurídica à operação.",
         "Garantir exclusivamente a produtividade da lavoura e assegurar que o produtor entregará a quantidade estimada na contratação."
       ],
       "correta": 2,
@@ -37,7 +37,7 @@
       "pergunta": "Um produtor arrendatário deseja utilizar a área cultivada como base para uma operação de Barter com emissão de CPR. Qual documentação e condição devem ser observadas?",
       "alternativas": [
         "Apenas o comprovante de pagamento do arrendamento e a declaração de produtividade da área.",
-        "Contrato de arrendamento vigente e assinado, carta de anuência do proprietário e verificação das condições da área para suportar a operação.",
+        "Contrato de arrendamento vigente e assinado, carta de anuência do proprietário, matrícula atualizada, CAR e verificação das condições da área para suportar a operação.",
         "Somente a matrícula atualizada do imóvel, pois o contrato de arrendamento não interfere na emissão da CPR.",
         "Contrato de arrendamento, mesmo vencido, acompanhado de uma declaração do produtor confirmando que continuará utilizando a área."
       ],
@@ -59,7 +59,7 @@
       "pergunta": "Para formalizar uma operação com CPR de um produtor proprietário da área rural, qual documento específico deve ser considerado na análise da propriedade?",
       "alternativas": [
         "Contrato de arrendamento atualizado, acompanhado de autorização de subarrendamento.",
-        "Matrícula atualizada do imóvel e Certidão de Penhor, observando também a necessidade de anuência quando aplicável.",
+        "Matrícula atualizada do imóvel, CAR e Certidão de Penhor, observando também a necessidade de anuência quando aplicável.",
         "Somente o Cadastro Ambiental Rural (CAR), pois ele substitui a matrícula e as demais certidões.",
         "Declaração de posse emitida pelo próprio produtor, acompanhada de comprovante de endereço."
       ],
@@ -82,7 +82,7 @@
       "alternativas": [
         "Apenas contrato social, CNPJ, inscrição estadual e comprovante de endereço da empresa.",
         "Ficha cadastral, RG/CPF dos sócios, CAR, matrícula do imóvel e declaração de Imposto de Renda dos representantes.",
-        "Fichas cadastral e de cultura, RG/CPF dos sócios, inscrição estadual/Sintegra, contrato social consolidado atualizado, balanços e DRE dos dois últimos exercícios e anuência BACEN.",
+        "Fichas cadastral e de cultura, RG/CPF dos sócios, inscrição estadual/Sintegra, contrato social consolidado atualizado, balanços e DRE dos dois últimos exercícios, anuência BACEN e IRPF atualizado dos sócios.",
         "Contrato social, notas fiscais de compra, extratos bancários dos últimos três meses e declaração de produtividade."
       ],
       "correta": 2,
@@ -103,7 +103,7 @@
       "pergunta": "Para iniciar uma cotação de seguro agrícola, quais informações são fundamentais para a identificação inicial da área?",
       "alternativas": [
         "Histórico de crédito, faturamento anual e relação de fornecedores do produtor.",
-        "Cadastro simplificado do produtor e localização da área que será segurada.",
+        "Cadastro simplificado do produtor e localização da área, CAR e matrícula atualizada da área que será assegurada.",
         "Matrícula atualizada, Certidão de Penhor e contrato de arrendamento registrado.",
         "Notas fiscais de compra de sementes, fertilizantes e defensivos, além da declaração de Imposto de Renda."
       ],
@@ -148,7 +148,7 @@
       "alternativas": [
         "O Barter garante que o produtor sempre receberá o maior preço de mercado durante a safra.",
         "O Barter elimina completamente os riscos de oscilação do mercado e assegura rentabilidade independentemente da produtividade.",
-        "O produtor pode aproveitar momentos estratégicos de mercado para fixar o preço da commodity, garantindo previsibilidade sobre a relação de troca negociada.",
+        "O produtor pode fazer um Barter à Fixar e aproveitar momentos estratégicos de mercado para fixar o preço da commodity, garantindo previsibilidade sobre a relação de troca negociada.",
         "O produtor poderá alterar automaticamente o preço contratado caso a cotação da soja suba após a assinatura do contrato."
       ],
       "correta": 2,
