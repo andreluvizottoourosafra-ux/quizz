@@ -22,7 +22,8 @@ No celular, o participante vê se acertou, quantos pontos ganhou, quantos acerto
 
 **Controles do apresentador (depois do PIN):**
 
-- **🚪 Fechar entrada:** ninguém novo consegue entrar, e quem já está continua jogando. Feche assim que todos tiverem entrado.
+- **Entrada automática:** ao clicar em **Iniciar quiz**, a entrada fecha sozinha, e quem tentar entrar depois recebe o aviso "A partida já começou". Se chegar alguém atrasado, clique em **🚪 Reabrir entrada**, e a pessoa entra com 0 ponto. Depois, feche de novo. **↺ Reiniciar** volta para o QR Code com a entrada aberta.
+- **🚪 Fechar entrada:** fecha a entrada a qualquer momento, até antes de começar.
 - **Remover participante:** clique no nome na tela de abertura ou numa linha do ranking. Use para nomes impróprios ou cadastros falsos.
 
 ## Editar as perguntas
@@ -42,7 +43,7 @@ Edite o arquivo `perguntas.json`:
 - `correta`: **posição** da alternativa certa, começando do 0 (0 = A, 1 = B, 2 = C, 3 = D).
 - `tempo`: segundos para responder.
 
-As perguntas que estão no arquivo agora são só exemplos.
+O arquivo tem as 15 perguntas da prova "Desafio Barter de Ouro", com 60 segundos cada.
 
 ## Logo oficial
 

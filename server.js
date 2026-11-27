@@ -285,7 +285,8 @@ function showRanking() { game.phase = 'ranking'; broadcastAll(); }
 function finish() { clearTimeout(game.timer); game.phase = 'final'; broadcastAll(); }
 
 function next() {
-  if (game.phase === 'lobby') return startQuestion(0);
+  // Ao começar a partida, a entrada fecha sozinha (o apresentador pode reabrir pelo botão)
+  if (game.phase === 'lobby') { game.entradaAberta = false; return startQuestion(0); }
   if (game.phase === 'question') return endQuestion();
   if (game.phase === 'reveal') return showRanking();
   if (game.phase === 'ranking') return game.qIndex + 1 >= QUESTIONS.length ? finish() : startQuestion(game.qIndex + 1);
@@ -295,9 +296,9 @@ function reset(keepPlayers) {
   clearTimeout(game.timer);
   try { QUESTIONS = loadQuestions(); } catch (e) { console.error(e.message); }
   game.phase = 'lobby'; game.qIndex = -1; game.answers = new Map();
+  game.entradaAberta = true; // voltou para a abertura: entrada aberta de novo
   if (keepPlayers) for (const p of game.players.values()) { p.score = 0; p.streak = 0; p.totalMs = 0; p.history = []; p.posAnterior = null; }
   else {
-    game.entradaAberta = true;
     for (const p of game.players.values()) if (p.socketId) io.to(p.socketId).emit('player:reset');
     game.players.clear();
   }
@@ -403,7 +404,7 @@ io.on('connection', (socket) => {
     if (letras(nome) < 2) return ack(cb, { ok: false, msg: 'Informe seu nome.' });
     if (letras(empresa) < 2) return ack(cb, { ok: false, msg: 'Informe sua empresa / filial.' });
     if (ofensivo(nome) || ofensivo(empresa)) return ack(cb, { ok: false, msg: 'Esse nome não é permitido. Use seu nome real.' });
-    if (!game.entradaAberta) return ack(cb, { ok: false, msg: 'A entrada no quiz foi encerrada.' });
+    if (!game.entradaAberta) return ack(cb, { ok: false, msg: 'A partida já começou e a entrada foi encerrada. Fale com o apresentador.' });
     if (game.phase === 'final') return ack(cb, { ok: false, msg: 'O quiz já terminou.' });
     if (game.players.size >= MAX_PLAYERS) return ack(cb, { ok: false, msg: 'Limite de participantes atingido.' });
     const token = crypto.randomBytes(16).toString('hex');

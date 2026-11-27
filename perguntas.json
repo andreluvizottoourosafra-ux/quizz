@@ -1,34 +1,169 @@
 {
   "perguntas": [
     {
-      "pergunta": "Quantos quilos tem uma saca padrão de grãos?",
-      "alternativas": ["50 kg", "60 kg", "40 kg", "75 kg"],
-      "correta": 1,
-      "tempo": 20
-    },
-    {
-      "pergunta": "Na fórmula NPK, o que representa a letra K?",
-      "alternativas": ["Cálcio", "Potássio", "Nitrogênio", "Fósforo"],
-      "correta": 1,
-      "tempo": 20
-    },
-    {
-      "pergunta": "Qual EPI protege as vias respiratórias na aplicação de defensivos?",
-      "alternativas": ["Avental", "Luvas nitrílicas", "Respirador com filtro", "Botas de borracha"],
+      "pergunta": "Um produtor possui restrições financeiras e alto nível de endividamento. Mesmo tendo interesse em realizar uma operação de Barter, quais cuidados adicionais devem ser considerados para avaliar sua viabilidade?",
+      "alternativas": [
+        "Solicitar somente o cadastro atualizado e a comprovação de propriedade rural.",
+        "Exigir apenas a aprovação comercial do gerente, desde que o produtor tenha histórico de relacionamento com a empresa.",
+        "Avaliar a necessidade de CPR e seguro agrícola, além de submeter a operação às análises de Crédito e Jurídico.",
+        "Liberar a operação mediante assinatura do Termo de Barter, pois a produção futura representa garantia suficiente."
+      ],
       "correta": 2,
-      "tempo": 20
+      "tempo": 60
     },
     {
-      "pergunta": "A sede da Ouro Safra fica em qual estado?",
-      "alternativas": ["Minas Gerais", "Paraná", "São Paulo", "Goiás"],
+      "pergunta": "Qual é a principal diferença entre a CPR Física e a CPR Financeira?",
+      "alternativas": [
+        "A CPR Física estabelece pagamento em dinheiro, enquanto a CPR Financeira determina a entrega obrigatória dos grãos.",
+        "A CPR Física prevê a liquidação por entrega do produto, enquanto a CPR Financeira prevê a liquidação por pagamento financeiro.",
+        "A CPR Física é utilizada somente em operações com soja, enquanto a Financeira é exclusiva para milho.",
+        "A CPR Física dispensa garantias e registro, enquanto a Financeira exige obrigatoriamente garantia imobiliária."
+      ],
+      "correta": 1,
+      "tempo": 60
+    },
+    {
+      "pergunta": "Na operação de Barter, qual é a principal finalidade da CPR (Cédula de Produto Rural)?",
+      "alternativas": [
+        "Comprovar que o produtor recebeu os insumos e permitir que a Ouro Safra defina posteriormente o preço dos grãos.",
+        "Substituir o contrato de compra dos insumos e garantir que o produtor tenha crédito aprovado.",
+        "Formalizar o compromisso do produtor, estabelecendo as condições da operação, como produto, quantidade, entrega, vencimento e garantias.",
+        "Garantir exclusivamente a produtividade da lavoura e assegurar que o produtor entregará a quantidade estimada na contratação."
+      ],
       "correta": 2,
-      "tempo": 15
+      "tempo": 60
     },
     {
-      "pergunta": "Verdadeiro ou falso: quanto mais rápido você responde certo, mais pontos ganha.",
-      "alternativas": ["Verdadeiro", "Falso"],
+      "pergunta": "Um produtor arrendatário deseja utilizar a área cultivada como base para uma operação de Barter com emissão de CPR. Qual documentação e condição devem ser observadas?",
+      "alternativas": [
+        "Apenas o comprovante de pagamento do arrendamento e a declaração de produtividade da área.",
+        "Contrato de arrendamento vigente e assinado, carta de anuência do proprietário e verificação das condições da área para suportar a operação.",
+        "Somente a matrícula atualizada do imóvel, pois o contrato de arrendamento não interfere na emissão da CPR.",
+        "Contrato de arrendamento, mesmo vencido, acompanhado de uma declaração do produtor confirmando que continuará utilizando a área."
+      ],
+      "correta": 1,
+      "tempo": 60
+    },
+    {
+      "pergunta": "Qual das situações abaixo representa uma área com restrição para contratação do seguro agrícola, conforme os critérios da cartilha?",
+      "alternativas": [
+        "Área de soja com histórico de cultivo, localização identificada e sistema de rotação de culturas.",
+        "Área com histórico de produtividade, cadastro atualizado e documentação da propriedade.",
+        "Área de primeiro plantio, pastagem, pós-plantio de cana ou terreno com características de piçarra e areia.",
+        "Área com cultivo recorrente de soja e milho, desde que sejam informados os dados de localização."
+      ],
+      "correta": 2,
+      "tempo": 60
+    },
+    {
+      "pergunta": "Para formalizar uma operação com CPR de um produtor proprietário da área rural, qual documento específico deve ser considerado na análise da propriedade?",
+      "alternativas": [
+        "Contrato de arrendamento atualizado, acompanhado de autorização de subarrendamento.",
+        "Matrícula atualizada do imóvel e Certidão de Penhor, observando também a necessidade de anuência quando aplicável.",
+        "Somente o Cadastro Ambiental Rural (CAR), pois ele substitui a matrícula e as demais certidões.",
+        "Declaração de posse emitida pelo próprio produtor, acompanhada de comprovante de endereço."
+      ],
+      "correta": 1,
+      "tempo": 60
+    },
+    {
+      "pergunta": "Qual alternativa apresenta corretamente os documentos necessários para o cadastro de um produtor rural pessoa física?",
+      "alternativas": [
+        "Ficha cadastral, ficha de cultura, RG/CPF, comprovante de endereço, CAR, inscrição estadual/Sintegra, Imposto de Renda, anuência BACEN e matrícula ou contrato de arrendamento.",
+        "Ficha cadastral, RG/CPF, comprovante de endereço, notas fiscais de insumos, extratos bancários e contrato de fornecimento de grãos.",
+        "Ficha de cultura, CAR, matrícula do imóvel, declaração de produtividade, contrato social e balanço patrimonial.",
+        "RG/CPF, inscrição estadual, comprovante de endereço, notas fiscais de comercialização e declaração de faturamento."
+      ],
       "correta": 0,
-      "tempo": 10
+      "tempo": 60
+    },
+    {
+      "pergunta": "No cadastro de uma empresa rural (pessoa jurídica), qual conjunto de documentos é necessário para a análise cadastral e financeira?",
+      "alternativas": [
+        "Apenas contrato social, CNPJ, inscrição estadual e comprovante de endereço da empresa.",
+        "Ficha cadastral, RG/CPF dos sócios, CAR, matrícula do imóvel e declaração de Imposto de Renda dos representantes.",
+        "Fichas cadastral e de cultura, RG/CPF dos sócios, inscrição estadual/Sintegra, contrato social consolidado atualizado, balanços e DRE dos dois últimos exercícios e anuência BACEN.",
+        "Contrato social, notas fiscais de compra, extratos bancários dos últimos três meses e declaração de produtividade."
+      ],
+      "correta": 2,
+      "tempo": 60
+    },
+    {
+      "pergunta": "Um produtor arrendatário pretende subarrendar a área rural utilizada na operação de Barter. Qual é o principal cuidado para a emissão da CPR?",
+      "alternativas": [
+        "A apresentação do contrato original de arrendamento é suficiente, mesmo que não permita o subarrendamento.",
+        "Verificar se o contrato permite o subarrendamento e obter a autorização expressa do proprietário, além de atender às demais exigências documentais.",
+        "Solicitar apenas uma declaração assinada pelo arrendatário, dispensando a participação do proprietário.",
+        "Apresentar a matrícula do imóvel e o CAR, pois esses documentos substituem a autorização para subarrendar."
+      ],
+      "correta": 1,
+      "tempo": 60
+    },
+    {
+      "pergunta": "Para iniciar uma cotação de seguro agrícola, quais informações são fundamentais para a identificação inicial da área?",
+      "alternativas": [
+        "Histórico de crédito, faturamento anual e relação de fornecedores do produtor.",
+        "Cadastro simplificado do produtor e localização da área que será segurada.",
+        "Matrícula atualizada, Certidão de Penhor e contrato de arrendamento registrado.",
+        "Notas fiscais de compra de sementes, fertilizantes e defensivos, além da declaração de Imposto de Renda."
+      ],
+      "correta": 1,
+      "tempo": 60
+    },
+    {
+      "pergunta": "Um produtor possui uma área própria e apresenta capacidade produtiva para cobrir a operação, mas também possui restrições financeiras relevantes. Qual deve ser a conduta do consultor?",
+      "alternativas": [
+        "Liberar a operação automaticamente, pois a propriedade rural elimina o risco de inadimplência.",
+        "Exigir somente o seguro agrícola, pois a existência de patrimônio dispensa a análise de crédito.",
+        "Encaminhar a operação para análise de Crédito e Jurídico, considerando as exigências de CPR e seguro aplicáveis ao caso.",
+        "Dispensar a análise financeira desde que o volume de grãos negociado seja inferior à capacidade produtiva da área."
+      ],
+      "correta": 2,
+      "tempo": 60
+    },
+    {
+      "pergunta": "Durante a negociação, o consultor identifica que a área do produtor é de primeiro plantio. Qual deve ser sua orientação em relação ao seguro agrícola?",
+      "alternativas": [
+        "Prosseguir normalmente, desde que o produtor apresente uma estimativa de produtividade.",
+        "Solicitar uma declaração de responsabilidade assinada pelo produtor para substituir a contratação do seguro.",
+        "Considerar que primeiro plantio é uma das situações com restrição de aceitação e verificar a viabilidade da operação sem presumir que haverá cobertura securitária.",
+        "Solicitar apenas uma vistoria técnica, pois a inspeção garante automaticamente a aprovação do seguro."
+      ],
+      "correta": 2,
+      "tempo": 60
+    },
+    {
+      "pergunta": "Após a entrega da documentação para emissão de uma CPR, qual é o fluxo correto de formalização da operação?",
+      "alternativas": [
+        "Assinatura da CPR, entrega dos insumos, análise de crédito e registro em cartório.",
+        "Análise de Crédito e Jurídico, conferência e emissão da CPR, coleta das assinaturas, encaminhamento ao cartório da cidade do plantio e posterior retirada do documento registrado.",
+        "Registro em cartório, análise de crédito, coleta das assinaturas e aprovação comercial da operação.",
+        "Entrega dos insumos, emissão da nota fiscal, registro da CPR e posterior coleta das assinaturas."
+      ],
+      "correta": 1,
+      "tempo": 60
+    },
+    {
+      "pergunta": "O produtor acredita que o preço da soja poderá subir nos próximos meses e, por isso, está receoso em realizar uma operação de Barter. Qual é o melhor argumento comercial?",
+      "alternativas": [
+        "O Barter garante que o produtor sempre receberá o maior preço de mercado durante a safra.",
+        "O Barter elimina completamente os riscos de oscilação do mercado e assegura rentabilidade independentemente da produtividade.",
+        "O produtor pode aproveitar momentos estratégicos de mercado para fixar o preço da commodity, garantindo previsibilidade sobre a relação de troca negociada.",
+        "O produtor poderá alterar automaticamente o preço contratado caso a cotação da soja suba após a assinatura do contrato."
+      ],
+      "correta": 2,
+      "tempo": 60
+    },
+    {
+      "pergunta": "Após a assinatura da CPR, para onde o documento deve ser encaminhado para seguir o processo de registro?",
+      "alternativas": [
+        "Diretamente ao fornecedor dos insumos, que ficará responsável pelo registro e pela guarda do documento.",
+        "Ao cartório da cidade onde está localizada a área de plantio, para conferência e realização do registro.",
+        "Ao cartório da cidade onde está localizada a sede da Ouro Safra, independentemente da localização da lavoura.",
+        "Diretamente à instituição financeira do produtor, que fará a validação e o registro da CPR."
+      ],
+      "correta": 1,
+      "tempo": 60
     }
   ]
 }
