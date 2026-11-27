@@ -2,7 +2,7 @@
 
 Quiz no estilo Kahoot para treinamentos. A pergunta aparece no telão e os participantes respondem pelo celular, todos ao mesmo tempo. A entrada é por QR Code e ninguém precisa de login.
 
-- **Telão:** `https://SEU-ENDERECO/`. Abre direto no QR Code. Para controlar o quiz, clique em **🔒 Apresentador** e digite o PIN.
+- **Telão:** `https://SEU-ENDERECO/`. Pede o PIN do apresentador primeiro. Depois do PIN aparece a abertura animada **Quiz de Ouro**; o botão **Começar** (ou Enter/espaço) abre a página do QR Code. Se a página for recarregada, volta direto para onde estava, sem repetir a abertura.
 - **Participantes:** `https://SEU-ENDERECO/jogar`. É para onde o QR Code leva, e cada pessoa joga pelo próprio celular.
 
 ## Como funciona
@@ -94,7 +94,7 @@ O app passou por uma bateria de 17 ataques simulados (força bruta do PIN, IP fa
 
 - **PIN:** depois de 5 erros, o IP fica bloqueado por 1 minuto. O IP vem do Cloudflare, e não do `X-Forwarded-For`, que o atacante consegue falsificar no Render. Se o PIN for fraco, o telão mostra um aviso só para o apresentador.
 - **Resultados:** o link do Excel usa um código aleatório entregue só ao apresentador. O PIN não aparece mais na URL.
-- **Telão público:** qualquer pessoa pode assistir, mas só quem digita o PIN controla o quiz. O telão recebe só o necessário (últimos 150 nomes e Top 15).
+- **Telão protegido:** sem o PIN, o servidor não envia nada ao telão (nem QR Code, nem perguntas, nem ranking). O telão recebe só o necessário (últimos 150 nomes e Top 15).
 - **Abuso:** cada conexão aceita até 10 mensagens por segundo, e quem insiste é desconectado. Mensagens maiores que 16 KB derrubam a conexão. Páginas de outros sites não conseguem se conectar. Cada conexão cadastra no máximo 1 participante.
 - **Nomes:** caracteres invisíveis, inversão de texto e acentos empilhados são removidos, e palavrões comuns são recusados. Na planilha, nomes que começam com `=`, `+`, `-` ou `@` recebem um apóstrofo, para o Excel não executar como fórmula.
 - **Respostas:** nenhuma mensagem revela acerto ou pontos antes do fim do tempo.

@@ -354,10 +354,9 @@ io.on('connection', (socket) => {
     if (++excessos > 50) socket.disconnect(true);
   });
 
-  // ---- Telão: qualquer um pode assistir (QR Code, perguntas, ranking); comandos exigem PIN
+  // ---- Telão: só abre depois do PIN (tela de abertura "Quiz de Ouro"). Sem PIN, nada é enviado.
   socket.on('host:watch', () => {
-    if (socket.data.watch) return; // um pedido por conexão
-    if (!socket.data.host) { if (espectadores >= MAX_ESPECTADORES) return; espectadores++; }
+    if (!socket.data.host || socket.data.watch) return;
     socket.data.watch = true;
     socket.join('hosts');
     socket.emit('host:state', hostState());
