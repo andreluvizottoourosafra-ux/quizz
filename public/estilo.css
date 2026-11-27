@@ -57,9 +57,9 @@ button { font-family: inherit; cursor: pointer; }
 
 .cartao { background: var(--papel); border-radius: var(--raio); box-shadow: var(--sombra); }
 
-/* Ícones das alternativas: sol, folha, espiga e gota, dentro de um selo com a letra */
+/* Ícones das alternativas: sol, folha, espiga e gota, dentro de um selo (sem letra) */
 .forma { width: 1.3em; height: 1.3em; flex: none; fill: #fff; }
-.selo-alt { flex: none; display: inline-flex; align-items: center; gap: .35em; padding: .3em .55em .3em .4em; border-radius: 999px; background: rgba(255,255,255,.2); font-weight: 900; }
+.selo-alt { flex: none; display: inline-flex; align-items: center; gap: .35em; padding: .35em; border-radius: 999px; background: rgba(255,255,255,.2); font-weight: 900; }
 .selo-alt .letra { font-size: .8em; opacity: .95; }
 .alt-0 .selo-alt { background: rgba(58,42,28,.12); }
 .alt-0 { background: var(--alt-0); color: var(--marrom); }

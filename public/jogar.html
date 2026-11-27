@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#FBF7EC">
-<title>Quiz Ouro Safra</title>
+<title>Quiz de Ouro · Ouro Safra</title>
 <link rel="stylesheet" href="/estilo.css">
 <style>
   body { min-height: 100dvh; }
@@ -77,7 +77,7 @@
   <!-- Cadastro -->
   <section class="tela" id="t-cadastro">
     <div class="centro">
-      <h1>Quiz do <span>Treinamento</span></h1>
+      <h1>Quiz de <span>Ouro</span></h1>
       <p>Preencha seus dados para participar</p>
       <form class="cartao" id="form" autocomplete="on">
         <label>Nome
@@ -201,7 +201,7 @@ function renderPergunta() {
   const b = $('#botoes');
   b.style.setProperty('--n', q.alternativas.length);
   b.innerHTML = q.alternativas.map((a, i) =>
-    `<button class="opcao alt-${i}" data-i="${i}"><span class="selo-alt">${FORMAS[i]}<span class="letra">${LETRAS[i]}</span></span><span>${esc(a)}</span></button>`).join('');
+    `<button class="opcao alt-${i}" data-i="${i}"><span class="selo-alt">${FORMAS[i]}</span><span>${esc(a)}</span></button>`).join('');
   b.querySelectorAll('.opcao').forEach((btn) => btn.addEventListener('click', () => responder(Number(btn.dataset.i))));
   ajustar();
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { if (S && S.phase === 'question') ajustar(); });
